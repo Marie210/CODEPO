@@ -2,26 +2,23 @@ int initThingstream(int flag_init) {
   Serial.println("INITIALISATION");
   if (flag_init == 0 ){
     Serial1.println("AT+IOTDEBUG=0");
-    delay(5000);
+    
     if(checkReception() == 1) { flag_init = 1; }
     Serial.println(flag_init);
-    }
-  if (flag_init == 1){
-    Serial1.println("AT+IOTCREATE") ;
-    delay(15000); 
-   
+  }
+  else if(flag_init == 1){
+    Serial1.println("AT+IOTCREATE");   
+    
     if(checkReception() == 1) { flag_init = 2; }
     Serial.println(flag_init);
   }
-  if (flag_init ==2 ){
+  else if(flag_init == 2){
     Serial1.println("AT+IOTCONNECT=true"); 
-    delay(5000);
      
     if(checkReception() == 1) { flag_init = 3; }
     Serial.println(flag_init);
   }
-  if (flag_init == 3) {
-   
+  else if(flag_init == 3) {
     Serial1.println("AT+IOTSUBSCRIBE=\"TEST1\",1");
     delay(5000);
     
