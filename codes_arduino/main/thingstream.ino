@@ -1,4 +1,3 @@
-
 int initThingstream(int flag_init) {
   Serial.println("INITIALISATION");
   if (flag_init == 0 ){
@@ -32,31 +31,51 @@ int initThingstream(int flag_init) {
   return flag_init;
 }
 
-int checkReception(){
-  //Fonction utilisée pour vérifier le bon envoi des commandes au Click 
-  int flag =  0 ; 
-  if(Serial1.available()){
-     String msg = Serial1.readString();
-     Serial.print("reponse : ");
-     Serial.println(msg);
-     if(msg.indexOf("SUCCESS") > 0) {
-      flag = 1;  
+int checkReception() {
+  bool check = true;
+  unsigned long timeInit = millis()*0.001;
+  char message[150];
+  int count = 0;
+  
+  while(check) {
+
+    Serial.println(millis()*0.001 - timeInit);  
+    if(millis()*0.001 - timeInit > 20.0) { 
+      Serial.println("To Long Time");  
+      return 0;
+     }
+
+     if (Serial1.available ()){
+        char st = Serial1.read();
+        count += 1; 
+        message[count] = st;  
+        message[count+1] = '\0';  
+                
+        if(message[count] == '\n'){
+          Serial.println(String(message));  
+          if (analyse(message) ==  1) {
+            Serial.println("SUCCESS");  
+            return 1;
+          } else {
+            Serial.println("FAILURE");
+            return 0;
+          }
+        }
      }
   }
-  return flag; 
+  
 }
 
 
 int analyse (String st) {
   // Arret de la publication si le mot STOP est reçu par le Click
   int res = 1;  
-  if(st.indexOf("STOP") > 0) {
-    res = 0;  
-  } else if(st.indexOf("GO") > 0) {
+  if(st.indexOf("GO") > 0 || st.indexOf("SUCCESS") > 0) {
     res = 1;
+  } else {
+    res = 0;
   }
-  return res ; 
-
+  return res; 
 }
 
 int publish(double Vt_Actual, double U, double X[3], double Z[5], double error){
