@@ -9,7 +9,7 @@ void measureVoltage(double *voltage, double *current) {
   //Get numSamples sumCur  
   for (int x = 0; x < numSamples; x++) {
     sumCur = sumCur + analogRead(A0);  //Add sumCur together
-    sumVolt = sumVolt + analogRead(A2);  //Add sumVolt together
+    sumVolt = sumVolt + analogRead(A1);  //Add sumVolt together
     delay(3); // let ADC settle before next sample 3ms
   }
   sumCur = sumCur / numSamples; //Taking Average of sumCur
