@@ -1,31 +1,37 @@
-int initThingstream(int flag_init) {
+void initThingstream(int *flag_init) {
   Serial.println("INITIALISATION");
-  if (flag_init == 0 ){
+  if (*flag_init == 0 ){
+    Serial.println("DEBUG");
     Serial1.println("AT+IOTDEBUG=0");
+    delay(5000);
     
-    if(checkReception() == 1) { flag_init = 1; }
-    Serial.println(flag_init);
+    if(checkReception() == 1) { *flag_init = 1; }
+    Serial.println(*flag_init);
   }
-  else if(flag_init == 1){
-    Serial1.println("AT+IOTCREATE");   
+  else if(*flag_init == 1){
+    Serial.println("CREATE");
+    Serial1.println("AT+IOTCREATE");  
+    delay(5000); 
     
-    if(checkReception() == 1) { flag_init = 2; }
-    Serial.println(flag_init);
+    if(checkReception() == 1) { *flag_init = 2; }
+    Serial.println(*flag_init);
   }
-  else if(flag_init == 2){
+  else if(*flag_init == 2){
+    Serial.println("CONNECT");
     Serial1.println("AT+IOTCONNECT=true"); 
+    delay(5000);
      
-    if(checkReception() == 1) { flag_init = 3; }
-    Serial.println(flag_init);
+    if(checkReception() == 1) { *flag_init = 3; }
+    Serial.println(*flag_init);
   }
-  else if(flag_init == 3) {
+  else if(*flag_init == 3) {
+    Serial.println("SUBSCRIBE");
     Serial1.println("AT+IOTSUBSCRIBE=\"TEST1\",1");
     delay(5000);
     
-    if(checkReception() == 1) { flag_init = 4; }
-    Serial.println(flag_init);
+    if(checkReception() == 1) { *flag_init = 4; }
+    Serial.println(*flag_init);
   }
-  return flag_init;
 }
 
 int checkReception() {
@@ -36,7 +42,14 @@ int checkReception() {
   
   while(check) {
 
-    Serial.println(millis()*0.001 - timeInit);  
+    /*
+    double Vt_Actual = 0.0, U = 0.0;
+    measureVoltage(&Vt_Actual, &U);
+    Serial.print(Vt_Actual, 5); Serial.print("  VT;  ");
+    Serial.print(U, 5); Serial.print("  U;  ");
+    Serial.print("\n");
+    */
+    
     if(millis()*0.001 - timeInit > 20.0) { 
       Serial.println("To Long Time");  
       return 0;
@@ -49,7 +62,7 @@ int checkReception() {
         message[count+1] = '\0';  
                 
         if(message[count] == '\n'){
-          Serial.println(String(message));  
+          Serial.print(String(message));  
           if (analyse(message) ==  1) {
             Serial.println("SUCCESS");  
             return 1;
