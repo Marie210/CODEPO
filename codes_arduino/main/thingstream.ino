@@ -1,5 +1,11 @@
+/**
+ensure that the 4 initialization steps needed to connect the click and the thingstream server are done 
+**/
+
 void initThingstream(int *flag_init) {
   Serial.println("INITIALISATION");
+  
+  //DEBUG allows the clicks to get clear error messages
   if (*flag_init == 0 ){
     Serial.println("DEBUG");
     Serial1.println("AT+IOTDEBUG=0");
@@ -8,6 +14,8 @@ void initThingstream(int *flag_init) {
     if(checkReception() == 1) { *flag_init = 1; }
     Serial.println(*flag_init);
   }
+  
+  //CREATE create the connection between the click and the server
   else if(*flag_init == 1){
     Serial.println("CREATE");
     Serial1.println("AT+IOTCREATE");  
@@ -16,6 +24,8 @@ void initThingstream(int *flag_init) {
     if(checkReception() == 1) { *flag_init = 2; }
     Serial.println(*flag_init);
   }
+  
+  //CONNECT is the second step of the connection between the click and the server
   else if(*flag_init == 2){
     Serial.println("CONNECT");
     Serial1.println("AT+IOTCONNECT=true"); 
@@ -24,6 +34,8 @@ void initThingstream(int *flag_init) {
     if(checkReception() == 1) { *flag_init = 3; }
     Serial.println(*flag_init);
   }
+  
+  //SUBSCRIBE to a topic allows the click to receive the message published in this topic
   else if(*flag_init == 3) {
     Serial.println("SUBSCRIBE");
     Serial1.println("AT+IOTSUBSCRIBE=\"TEST1\",1");
@@ -33,6 +45,10 @@ void initThingstream(int *flag_init) {
     Serial.println(*flag_init);
   }
 }
+
+/**
+ensure that the message send by the click has been received by the server
+**/
 
 int checkReception() {
   bool check = true;
@@ -88,15 +104,18 @@ int analyse (String st) {
   return res; 
 }
 
+/**
+Publish a message on a topic with the Thingstream click
+**/
 int publish(double Vt_Actual, double U, double X[3], double Z[5], double error){
 
     char message[150];
     sprintf(message, "AT+IOTPUBLISH=\"TEST1\",1,\"{'tension': %d, 'courant': %d, 'Error': %d, 'SOC': %d}\"", Vt_Actual, U, error, X[0]);
     
-    // envoie du message vers le Thingstream click
+    // ask the Thingstream click to publish the message
     Serial1.println(message);
     
-    // verification si le message a bien été réceptionné ou non
+    // check that the message has been received
     int flag = checkReception();
     if(flag == 1) {
       Serial.println("SUCCSESS -- envoie du message :");
