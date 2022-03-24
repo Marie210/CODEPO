@@ -33,8 +33,8 @@ double temperature;
 double sec = 0.0;
 
 unsigned long previous_millis = 0 ;  
-int  flag_init = 4; // flag utilisé pour l'initialisation de l'arduino et du click 
-int flag_publish = 1;  // si sur 1 publish activé si sur 0 publish désactivé 
+int  flag_init = 4; // flag used for the initialisation of the click 
+int flag_publish = 1;  // if equals to 1 publish activated, if equals to 0 publish disabled
 unsigned long previous_millis_publish = 0.0;
 
 void watchdogSetup(void) {/*** watchdogDisable (); ***/}
@@ -68,12 +68,14 @@ void loop() {
   if(mode == 0) {
       delay(10);
   
+     //initalize Kalman filter with starting data
       if(flag_init == 4) {
         char input[] = "{'C1': 1.704510181209152, 'C2': 1.528807876468525, 'R0': 0.045060113042053, 'R1': 0.022227266870883, 'R2': 0.041772924359798, 'SOCOCV': [-5899.08970208633, 33676.8099461629, -83441.9838542838, 117439.916788238, -103158.271786075, 58466.9571460381, -21320.9039215880, 4810.53130689387, -602.846517986747, 26.7902085666153, 3.13908872646908, 5.40144738302999], 'dSOCOCV': [-64889.9867229497, 336768.099461629, -750977.854688554, 939519.334305904, -722107.902502523, 350801.742876229, -106604.519607940, 19242.1252275755, -1808.53955396024, 53.5804171332306, 3.13908872646908], 'SOC_init': 0.0, 'P_x': [ 5e-7, 0, 0, 0, 5e-7, 0, 0, 0, 5e-7 ], 'P_z': [ 5e-8, 0, 0, 0, 0, 0, 5e-8, 0, 0, 0, 0, 0, 5e-8, 0, 0, 0, 0, 0, 5e-8, 0, 0, 0, 0, 0, 5e-8], 'Q_x': [ 1e-10, 0, 0, 0, 1e-10, 0, 0, 0, 1e-10 ], 'Q_z': [ 1e-8, 0, 0, 0, 0, 0, 1e-8, 0, 0, 0, 0, 0, 1e-8, 0, 0, 0, 0, 0, 1e-8, 0, 0, 0, 0, 0, 1e-8 ], 'R_x': 1e-5, 'R_z': 1e-7, 'DeltaT': 0.46, 'Qn_rated': 1300}";
         initialisation(input, X, Z, SOCOCV, dSOCOCV, P_x, P_z, Q_x, Q_z, &R_x, &R_z, &DeltaT, &Qn_rated);
         flag_init = 5;
       }
     
+    //once everything is initialized the code takes measures
       if(flag_init == 5) {
     
     
