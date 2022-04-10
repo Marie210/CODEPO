@@ -3,11 +3,11 @@
 
 void initialisation(const String input, double X[3], double Z[5], 
               double SOCOCV[12], double dSOCOCV[11], double P_x[9], double P_z[25], double Q_x[9],
-              double Q_z[25], double *R_x, double *R_z, double *DeltaT, double *Qn_rated) {
+              double Q_z[25], double *R_x, double *R_z, double *Qn_rated, double *voltage_rated, double *current_rated) {
               double parameters[5];
               double SOC_init;
               // load data from JSON file
-              loadJson(input, parameters, &SOC_init, SOCOCV, dSOCOCV, P_x, P_z, Q_x, Q_z, R_x, R_z, DeltaT, Qn_rated);
+              loadJson(input, parameters, &SOC_init, SOCOCV, dSOCOCV, P_x, P_z, Q_x, Q_z, R_x, R_z, Qn_rated, voltage_rated, current_rated);
               // create X and Z arrays from parameters
               X[0] = SOC_init; X[1] = 0.0; X[2] = 0.0;
               Z[0] = parameters[2]; Z[1] = parameters[3]; Z[2] = parameters[4];
@@ -19,7 +19,7 @@ void initialisation(const String input, double X[3], double Z[5],
 // Loads the configuration from a file
 void loadJson(String input, double parameters[5], double *SOC_init, double SOCOCV[12], double dSOCOCV[11], 
               double P_x[9], double P_z[25], double Q_x[9], double Q_z[25],
-              double *R_x, double *R_z, double *DeltaT, double *Qn_rated) {
+              double *R_x, double *R_z, double *Qn_rated, double *voltage_rated, double *current_rated) {
   
   // Allocate a temporary JsonDocument
   // Don't forget to change the capacity to match your requirements.
@@ -46,23 +46,32 @@ void loadJson(String input, double parameters[5], double *SOC_init, double SOCOC
   *SOC_init = doc["SOC_init"];
   *R_x = doc["R_x"];
   *R_z = doc["R_z"];
-  *DeltaT = doc["DeltaT"];
   *Qn_rated = doc["Qn_rated"];
+  *voltage_rated = doc["voltage_rated"];
+  *current_rated = doc["current_rated"];
   
   for (int i = 0; i < 12; i++) {
     SOCOCV[i] = doc["SOCOCV"][i];
   }
 
   for (int i = 0; i < 11; i++) {
+    if(i%4 == 0) {
+      P_x[i] = doc["P_x"];
+      Q_x[i] = doc["Q_x"];
+    } else {
+      P_x[i] = 0.0;
+      Q_x[i] = 0.0;
+    }
     dSOCOCV[i] = doc["dSOCOCV"][i];
-    P_x[i] = doc["P_x"][i];
-    Q_x[i] = doc["Q_x"][i];
   }
 
   for (int i = 0; i < 25; i++) {
-    P_z[i] = doc["P_z"][i];
-    Q_z[i] = doc["Q_z"][i];
+    if(i%6 == 0) {
+      P_z[i] = doc["P_z"];
+      Q_z[i] = doc["Q_z"];
+    } else {
+      P_z[i] = 0.0;
+      Q_z[i] = 0.0;
+    }
   }
-  
-
 }
