@@ -7,25 +7,45 @@ void initThingstream(int *flag_init) {
     Serial.println("DEBUG");
     Serial1.println("AT+IOTDEBUG=0");
     
-    if(checkReception() == 1) { *flag_init = 1; }
+    if(checkReception() == 1) { 
+      *flag_init = 1; 
+        messageLCD("Debug : success");
+      } else {
+        messageLCD("Debug : fail");
+      }
   }
   else if(*flag_init == 1){
     Serial.println("CREATE");
     Serial1.println("AT+IOTCREATE");  
     
-    if(checkReception() == 1) { *flag_init = 2; }
+    if(checkReception() == 1) { 
+        *flag_init = 2; 
+        messageLCD("Create : success");
+     } else {
+        messageLCD("Create : fail");
+     }
   }
   else if(*flag_init == 2){
     Serial.println("CONNECT");
     Serial1.println("AT+IOTCONNECT=true"); 
      
-    if(checkReception() == 1) { *flag_init = 3; }
+    if(checkReception() == 1) { 
+        *flag_init = 3; 
+        messageLCD("Connect : success");
+    } else {
+        messageLCD("Connect : fail");
+    }
   }
   else if(*flag_init == 3) {
     Serial.println("SUBSCRIBE");
     Serial1.println("AT+IOTSUBSCRIBE=\"TEST1\",1");
     
-    if(checkReception() == 1) { *flag_init = 4; }
+    if(checkReception() == 1) { 
+        *flag_init = 4; 
+        messageLCD("Subscribe : success");
+    } else {
+        messageLCD("Subscribe : fail");
+    }
   }
 }
 
@@ -139,8 +159,6 @@ int publish(double Vt_Actual, double U, double X[3], double Z[5], double error, 
     }
 }
 
-void(* resetFunc) (void) = 0;
-
 void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5], 
               double SOCOCV[12], double dSOCOCV[11], double P_x[9], double P_z[25], double Q_x[9],
               double Q_z[25], double *R_x, double *R_z, double *Qn_rated, double *current_rated, double *voltage_rated) {
@@ -207,5 +225,4 @@ void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5],
         }
       }
   }
-  
 }
