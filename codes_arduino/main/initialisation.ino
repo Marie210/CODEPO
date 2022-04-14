@@ -55,12 +55,14 @@ void loadJson(String input, double parameters[5], double *SOC_init, double SOCOC
   }
 
   for (int i = 0; i < 11; i++) {
-    if(i%4 == 0) {
-      P_x[i] = doc["P_x"];
-      Q_x[i] = doc["Q_x"];
-    } else {
-      P_x[i] = 0.0;
-      Q_x[i] = 0.0;
+    if(i < 9) {
+        if(i%4 == 0) {
+          P_x[i] = doc["P_x"];
+          Q_x[i] = doc["Q_x"];
+        } else {
+          P_x[i] = 0;
+          Q_x[i] = 0;
+        }
     }
     dSOCOCV[i] = doc["dSOCOCV"][i];
   }
@@ -70,8 +72,9 @@ void loadJson(String input, double parameters[5], double *SOC_init, double SOCOC
       P_z[i] = doc["P_z"];
       Q_z[i] = doc["Q_z"];
     } else {
-      P_z[i] = 0.0;
-      Q_z[i] = 0.0;
+      P_z[i] = 0;
+      Q_z[i] = 0;
     }
   }
+}
 }
