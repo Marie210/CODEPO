@@ -1,5 +1,4 @@
-void printLCD(int option, double voltage, double current, double SOC, bool on) {
-    char res[150];
+void printLCD(int option, double voltage, double current, double SOC, bool on, int mode, double temperature) {
     lcd.clear();
     lcd.setCursor(0,0);
     
@@ -14,7 +13,7 @@ void printLCD(int option, double voltage, double current, double SOC, bool on) {
     } else if(option == 2) {
         lcd.print("Mode :");
         lcd.setCursor(0, 1);
-        lcd.print(current);
+        lcd.print(mode);
     } else if(option == 3) {
         lcd.print("SOC :");
         lcd.setCursor(0, 1);
@@ -28,5 +27,15 @@ void printLCD(int option, double voltage, double current, double SOC, bool on) {
           lcd.setCursor(0, 1);
           lcd.print("OFF"); 
         }
+    } else if(option == 5) {
+        lcd.print("Temperature :");
+        lcd.setCursor(0, 1);
+        lcd.print(temperature);
     }
+}
+
+void messageLCD(String message) {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print(message);
 }
