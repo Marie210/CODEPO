@@ -3,7 +3,7 @@ void measureVoltage(double *voltage, double *current, double *testVoltage) {
   double R1 = 2.2, R2 =  3.3, R3 = 8.2, R4 = 6.8; 
   double sumCur = 0.0, sumVolt = 0.0, sumVolt2 = 0.0, Vcc = 0.0;
   double Vref = 3.3; // tension de reference de l'arduino
-  int numSamples = 250;
+  int numSamples = 100;
   int counter = 0;
   double currentTime = 0.0;
 
@@ -32,6 +32,7 @@ void measureVoltage(double *voltage, double *current, double *testVoltage) {
       sumVolt2 = sumVolt2 + analogRead(A10);  //Add sumVolt together
       currentTime = micros();
       counter = counter + 1;
+      delay(2);
     }
   }
   currentTime = 0.0;
@@ -48,8 +49,8 @@ void measureVoltage(double *voltage, double *current, double *testVoltage) {
   //Serial.print("I = "); Serial.println(*current,5);
   //Serial.print(Vcc, 5); Serial.print("  Vcc;  ");
   
-  if(Vcc < 0.01 || (*current < 0.2 && *current > -0.2)) {
-    //*current = 0.0;
+  if(Vcc < 0.01 || (*current < 0.3 && *current > -0.3)) {
+    *current = 0.0;
   }  
   
 }
@@ -73,7 +74,7 @@ double mesureTemperature() {
   double R_th = R1 * ( (Vcc/tension) - 1);
 
 
-  /* ############ Mesure de température ########################################## */ 
+  // Mesure de température
   logR_th = log(R_th);
   T = (1.0 / (A + B*logR_th + C*logR_th*logR_th*logR_th)); // Formule de Steinhart-Hart liant la résistance mesuré à la température (en Kelvin)
   T = T - 273.15; // Conversion Kelvin -> Celsius
