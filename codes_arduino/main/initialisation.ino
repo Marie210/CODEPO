@@ -46,7 +46,7 @@ void loadJson(String input, double parameters[5], double *SOC_init, double SOCOC
   *SOC_init = doc["SOC_init"];
   *R_x = doc["R_x"];
   *R_z = doc["R_z"];
-  *Qn_rated = doc["Qn_rated"];
+  *Qn_rated = doc["Qn_rated"]; *Qn_rated = *Qn_rated * 3600.0;
   *voltage_rated = doc["voltage_rated"];
   *current_rated = doc["current_rated"];
   
@@ -76,5 +76,4 @@ void loadJson(String input, double parameters[5], double *SOC_init, double SOCOC
       Q_z[i] = 0;
     }
   }
-}
 }
