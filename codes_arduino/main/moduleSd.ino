@@ -51,3 +51,12 @@ void closeFile()
     Serial.println("File closed");
   }
 }
+
+void printSd(double Vt_Actual, double U, double sec, double temperature) {
+    char data[150];
+    sprintf(data, "%f     VT;     %f     I;     %f     Ti;     %f     Te;", Vt_Actual, U, sec, temperature);
+    if(createFile("data.txt")) {
+      writeToFile(data);
+      closeFile();
+    }
+}
