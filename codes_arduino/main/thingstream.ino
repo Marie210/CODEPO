@@ -1,9 +1,9 @@
-void initThingstream(int *flag_init, int resetThingstreamPin) {
+int initThingstream(int *flag_init, int resetThingstreamPin) {
   if (*flag_init == 0 ){
     // reset the Thingstream click
     digitalWrite(resetThingstreamPin, LOW);
     delay(1200);
-    digitalWrite(3, HIGH);
+    digitalWrite(resetThingstreamPin, HIGH);
     Serial.println("DEBUG");
     Serial1.println("AT+IOTDEBUG=0");
     if(checkReception() == 1) { 
@@ -46,20 +46,18 @@ void initThingstream(int *flag_init, int resetThingstreamPin) {
 }
 
 int checkReception() {
-  bool check = true;
   unsigned long timeInit = millis()*0.001;
   char message[150];
   int count = 0;
   
-  while(check) {
-    
+  while(true) {
+    // If maximum time (20s) to wait for message reception exceeded
     if(millis()*0.001 - timeInit > 20.0) { 
       Serial.println("To Long Time");
-      check = false;  
       return 0;
      }
-
-     if (Serial1.available()){
+    // If not yet exceeded
+    if (Serial1.available()){
         char st = Serial1.read();
         message[count] = st;  
         message[count+1] = '\0';  
@@ -68,10 +66,8 @@ int checkReception() {
         if(message[count-1] == '\n'){
           Serial.print(String(message));  
           if (analyse(message) ==  1) {
-            check = false;
             return 1;
           } else {
-            check = false;
             return 0;
           }
         }
