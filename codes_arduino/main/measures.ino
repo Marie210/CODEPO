@@ -22,28 +22,26 @@ double measureVoltage(double R1, double R2, int numSamples, const byte VPin) {
 }
 
 
-double measureCurrent(const byte pinI, const byte VccIPin, double mvPerI, int numSamples) {
+double measureCurrent(int numSamples, double offset, double mvPerI) {
   double sumCur = 0.0;
   double Vref = 3.3; // tension de reference de l'arduino
   int counter = 0;
   double currentTime = 0.0;
-  double offset = 0.0;
   double I = 0.0;
   //Get numSamples sumCur  
   while(counter < numSamples) {
     if(micros() >= currentTime + 200) {
-      int meas = analogRead(pinI);
-      sumCur = sumCur + sq(meas);  // Add sumCur together
+      int meas = analogRead(pinI)-analogRead(VccIPin);
+      sumCur = sumCur + meas;  // Add sumCur together
       currentTime = micros();
       counter = counter + 1;
     }
   }
-  sumCur = sqrt(sumCur / numSamples) - offset; //Taking Average of sumCur
-  double Vcc = analogRead(VccIPin) * (Vref / 1023.0);
-  I = ((sumCur * (Vref / 1023.0)) - Vcc) / mvPerI;
-  // application d'un treshold sur le courant
-  if(Vcc < 0.01 || (I < 0.3 && I > -0.3)) {
-    //I = 0.0;
+  sumCur = sumCur / numSamples; //Taking Average of sumCur
+  I = (sumCur * (Vref / 1023.0)) / mvPerI - offset;
+  // Application d'un treshold sur le courant
+  if(I < 0.3 && I > -0.3) {
+    I = 0.0;
   }  
   Serial.print("I = "); Serial.println(I);
   return I;
@@ -85,7 +83,7 @@ double readAnalogMux(int channel, int PIN_ADDR_A, int PIN_ADDR_B, int PIN_ADDR_C
   digitalWrite(PIN_ADDR_C, bitRead(channel, 2));
 }
 
-void takeMeasures(double *V, double *I, double *T, int nbBatteries, int nbCurrent, int PIN_ADDR_A, int PIN_ADDR_B, int PIN_ADDR_C, double RV, double *pot, int numSamples, const byte VPin, const byte pinI, const byte VccIPin, double pinISP, double VccIPinSP, double mvPerI, const byte TPin, const byte VccPin, double R, double RVcc1, double RVcc2) {
+void takeMeasures(double *V, double *I, double *T, int nbBatteries, int nbCurrent,double RV, double *pot, int numSamples, double R, double RVcc1, double RVcc2, double offset_20, double offset_100, double mvPerI_20, double mvPerI_100) {
   for(int i = 0; i < nbBatteries; i++){
     readAnalogMux(i, PIN_ADDR_A, PIN_ADDR_B, PIN_ADDR_C);
     V[i] = measureVoltage(RV, pot[i], numSamples, VPin);
@@ -93,9 +91,9 @@ void takeMeasures(double *V, double *I, double *T, int nbBatteries, int nbCurren
     Serial.print(i); Serial.print(" = "); Serial.println(T[i]);
     if(i < nbCurrent) {
       if(i == 0) {
-        I[i] = measureCurrent(pinI, VccIPin, mvPerI, numSamples);
+        I[i] = measureCurrent(numSamples, offset_20, mvPerI_20);
       } else {
-        I[i] = measureCurrent(pinISP, VccIPinSP, mvPerI, numSamples);
+        I[i] = measureCurrent(numSamples, offset_100, mvPerI_100);
       }
     }
   }
