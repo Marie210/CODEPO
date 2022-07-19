@@ -56,15 +56,19 @@ int Vnb = 0;
 int Inb = 0;
 double Valim = 0.0;
 double RV = 32300;
-double pot[nbBatteries] = {10000, 10000, 10000, 10000, 10000, 10000}; 
+double pot[nbBatteries] = {20400, 20400, 20400, 20400, 20400, 20400}; 
 double RVcc1 = 500000; 
 double RVcc2 = 500000;
 double RT = 4700;
 double RSP1 = 1000000;
 double RSP2 = 20400;
 int numSamples = 100;
-double mvPerI = 0.03125;
-/* -- FILTRE KALEMAN-- */
+double mvPerI_20 = 31.25;
+double offset_20 = 0.36;
+double mvPerI_100 = 6.25;
+double offset_100 = 0.63;
+/* -- FILTRE KALMANN-- */
+char input[] = "{'C1': 1.704510181209152, 'C2': 1.528807876468525, 'R0': 0.045060113042053, 'R1': 0.022227266870883, 'R2': 0.041772924359798, 'SOCOCV': [-5899.08970208633, 33676.8099461629, -83441.9838542838, 117439.916788238, -103158.271786075, 58466.9571460381, -21320.9039215880, 4810.53130689387, -602.846517986747, 26.7902085666153, 3.13908872646908, 5.40144738302999], 'dSOCOCV': [-64889.9867229497, 336768.099461629, -750977.854688554, 939519.334305904, -722107.902502523, 350801.742876229, -106604.519607940, 19242.1252275755, -1808.53955396024, 53.5804171332306, 3.13908872646908], 'SOC_init': 1.0, 'P_x': 5e-7, 'P_z': 5e-5, 'Q_x': 1e-8, 'Q_z': 1e-8, 'R_x': 1, 'R_z': 10, 'Qn_rated': 1.3, 'voltage_rated': 2, 'current_rated': 1.3}";
 double X[3*nbBatteries];
 double Z[5*nbBatteries];
 double SOCOCV[12];
@@ -171,33 +175,38 @@ void loop() {
           }
       }
   }
-  else if(flag_init == 4) {
-        char input[] = "{'C1': 1.704510181209152, 'C2': 1.528807876468525, 'R0': 0.045060113042053, 'R1': 0.022227266870883, 'R2': 0.041772924359798, 'SOCOCV': [-5899.08970208633, 33676.8099461629, -83441.9838542838, 117439.916788238, -103158.271786075, 58466.9571460381, -21320.9039215880, 4810.53130689387, -602.846517986747, 26.7902085666153, 3.13908872646908, 5.40144738302999], 'dSOCOCV': [-64889.9867229497, 336768.099461629, -750977.854688554, 939519.334305904, -722107.902502523, 350801.742876229, -106604.519607940, 19242.1252275755, -1808.53955396024, 53.5804171332306, 3.13908872646908], 'SOC_init': 1.0, 'P_x': 5e-7, 'P_z': 5e-5, 'Q_x': 1e-8, 'Q_z': 1e-8, 'R_x': 1, 'R_z': 10, 'Qn_rated': 1.3, 'voltage_rated': 2, 'current_rated': 1.3}";
-        initialisation(input, X, Z, SOCOCV, dSOCOCV, P_x, P_z, Q_x, Q_z, R_x, R_z, &Qn_rated, &voltage_rated, &current_rated);
-        duplicate(X, Z, P_x, P_z, Q_x, Q_z, R_x, R_z, nbBatteries);
+  else if(flag_init == 4) { // Initialisation des paramètres pour les filtres de Kalmann
+        initialisation(input, X, Z, SOCOCV, dSOCOCV, P_x, P_z, Q_x, Q_z, R_x, R_z, &Qn_rated, &voltage_rated, &current_rated); // Pour une batterie
+        duplicate(X, Z, P_x, P_z, Q_x, Q_z, R_x, R_z, nbBatteries); // Dupliquer pour toutes les batteries
         flag_init = 5;
   } 
   else if(flag_init == 5) {
       if(mode == 0 && on) {
         /* --- Measure VOLTAGE + CURRENT + TEMP ---*/
-        takeMeasures(V, I, T, nbBatteries, nbCurrent, PIN_ADDR_A, PIN_ADDR_B, PIN_ADDR_C, RV, pot, numSamples, VPin, pinI, VccIPin, pinISP, VccIPinSP, mvPerI, TPin, VccPin, RT, RVcc1, RVcc2);
+        takeMeasures(V, I, T, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, offset_20, offset_100, mvPerI_20, mvPerI_100);
     
         /* --- AFFICHAGE ---*/
-        sec = millis()*0.001;
+        //sec = millis()*0.001;
     
         DeltaT = millis()*0.001 - kalmanTime;
         kalmanTime = millis()*0.001;
-        DeltaT = 0.5;
+        //DeltaT = 0.5;
         
         /* --- COULOMB Counting ---*/
         for(int i = 0; i < nbBatteries; i++) {
           SoC_coulomb[i] -= (I[0] * DeltaT) / Qn_rated; // Estimated SoC in %
         }
       
-        /* --- KALMAN FILTER ---*/
-        kalmanFilter(I[0], X, Z, SOCOCV, dSOCOCV, V, P_x, P_z, Q_x, Q_z, R_x, R_z, DeltaT, Qn_rated, nbBatteries);
+        /* --- KALMANN FILTER ---*/
+        double time1 = millis();
+        for(int i = 0; i < nbBatteries; i++) { // Kalmann filter applied on each 
+           error = extendedKalmanFilter(I[0], X + 3*i, Z + 5*i, SOCOCV, dSOCOCV, V[i], P_x + 9*i, P_z + 25*i, Q_x + 9*i, Q_z + 25*i, R_x[i], R_z[i], DeltaT, Qn_rated);
+        }
+        double computationTimeMS = millis() - time1;
+        Serial.print("Computation time : "); Serial.print(computationTimeMS); Serial.println(" ms.");
                 
         //String message = createData(V[0], U, X, Z, error);
+        /* --- Publish at a certain frequency --- */
         if (millis()  >=  previous_millis + 60000 && flag_publish == 1 && initClick == true) {
           previous_millis =  millis();
           Serial.print("publish");
@@ -207,7 +216,7 @@ void loop() {
     } else if(mode == 1 && on) {
 
         V[0] = measureVoltage(RV, pot[0], numSamples, VPin);
-        I[0] = measureCurrent(pinI, VccIPin, mvPerI, numSamples);
+        I[0] = measureCurrent(numSamples, offset_20, mvPerI_20);
         T[0] = mesureTemperature(TPin, VccPin, RT, RVcc1, RVcc2);
         
         /* ---- save data to SD card ---- */
@@ -228,7 +237,7 @@ void loop() {
     } else if(mode == 2 && on) {
         /* ---- MEASURES => ALIMENTATION - VOLTAGE - CURRENT - TEMPERATURE - TIME ---- */
         V[0] = measureVoltage(RV, pot[0], numSamples, VPin);
-        I[0] = measureCurrent(pinI, VccIPin, mvPerI, numSamples);
+        I[0] = measureCurrent(numSamples, offset_20, mvPerI_20);
         T[0] = mesureTemperature(TPin, VccPin, RT, RVcc1, RVcc2);
         sec = millis()*0.001;
         /* ---- save data to SD card ---- */
@@ -242,7 +251,7 @@ void loop() {
 
     if(millis() - lcdTime > updateLCDTime) {
       lcdTime = millis();
-      printLCD(affichage, V[Vnb], Vnb, Inb, I[Inb], X[Vnb*3], on, mode, T[Vnb]);
+      printLCD(affichage, V[Vnb], Vnb, Inb, I[Inb], X[Vnb*3], on, mode, T[Vnb], upPin, downPin, rightPin, leftPin);
     }
 
     if(oldMode != mode) {
@@ -250,7 +259,7 @@ void loop() {
       oldMode = mode;
     }
     
-  } else {
+  } else { // flag_init = 0
     initThingstream(&flag_init, resetThingstreamPin);
   }
   
