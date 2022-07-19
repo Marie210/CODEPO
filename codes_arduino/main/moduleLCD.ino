@@ -1,4 +1,4 @@
-void printLCD(int option, double voltage, int Vnb, int Inb, double current, double SOC, bool on, int mode, double temperature) {
+void printLCD(int option, double voltage, int Vnb, int Inb, double current, double SOC, bool on, int mode, double temperature, int upPin, int downPin, int rightPin, int leftPin) {
     lcd.clear();
     lcd.setCursor(0,0);
     Serial.print("option = "); Serial.println(option);
@@ -115,7 +115,7 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
         *stateUP = BUTTON_UP;
         if(*affichage < 5) {
           *affichage += 1;
-          printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb]);
+          printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin);
         }
       }
       if (BUTTON_DOWN != *stateDOWN) {
@@ -123,7 +123,7 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
         Serial.print("DOWN");
         if(*affichage > 0) {
           *affichage -= 1;
-          printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb]);
+          printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin);
         }
       }
       if(BUTTON_RIGHT != *stateRIGHT) {
@@ -134,10 +134,10 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
             if(*mode > 2) {
               *mode = 0;
             }
-            printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb]);
+            printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin);
         } else if(*affichage == 4) {
             *on = !*on;
-            printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb]);
+            printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin);
         } else if(*affichage == 0 || *affichage == 5 || *affichage == 3) {
           *Vnb += 1;
           if(*Vnb > nbBatteries-1) {
