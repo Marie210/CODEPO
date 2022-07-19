@@ -1,12 +1,11 @@
-void initThingstream(int *flag_init) {
+void initThingstream(int *flag_init, int resetThingstreamPin) {
   if (*flag_init == 0 ){
     // reset the Thingstream click
-    digitalWrite(3, LOW);
+    digitalWrite(resetThingstreamPin, LOW);
     delay(1200);
     digitalWrite(3, HIGH);
     Serial.println("DEBUG");
     Serial1.println("AT+IOTDEBUG=0");
-    
     if(checkReception() == 1) { 
       *flag_init = 1; 
         messageLCD("Debug : success");
@@ -17,7 +16,6 @@ void initThingstream(int *flag_init) {
   else if(*flag_init == 1){
     Serial.println("CREATE");
     Serial1.println("AT+IOTCREATE");  
-    
     if(checkReception() == 1) { 
         *flag_init = 2; 
         messageLCD("Create : success");
@@ -28,7 +26,6 @@ void initThingstream(int *flag_init) {
   else if(*flag_init == 2){
     Serial.println("CONNECT");
     Serial1.println("AT+IOTCONNECT=true"); 
-     
     if(checkReception() == 1) { 
         *flag_init = 3; 
         messageLCD("Connect : success");
@@ -39,7 +36,6 @@ void initThingstream(int *flag_init) {
   else if(*flag_init == 3) {
     Serial.println("SUBSCRIBE");
     Serial1.println("AT+IOTSUBSCRIBE=\"TEST1\",1");
-    
     if(checkReception() == 1) { 
         *flag_init = 4; 
         messageLCD("Subscribe : success");
@@ -142,6 +138,8 @@ int analyse (String st) {
 int publish(double Vt_Actual, double U, double X[3], double Z[5], double error, double temperature){
 
     char message[150];
+    if(isnan(X[0])) { X[0] = 0.0; }
+    if(isnan(error)) { error = 0.0; }
     sprintf(message, "AT+IOTPUBLISH=\"TEST1\",1,\"{'tension': %f, 'courant': %f, 'Error': %f, 'SOC': %f, 'temperature' : %f}\"", Vt_Actual, U, error, X[0], temperature);
 
     
@@ -149,6 +147,7 @@ int publish(double Vt_Actual, double U, double X[3], double Z[5], double error, 
     Serial1.println(message);
     
     // verification si le message a bien été réceptionné ou non
+    /*
     int flag = checkReception();
     if(flag == 1) {
       Serial.println("SUCCSESS -- envoie du message :");
@@ -157,6 +156,7 @@ int publish(double Vt_Actual, double U, double X[3], double Z[5], double error, 
       Serial.println("FAIL -- envoie du message :");
       Serial.println(message);
     }
+    */
 }
 
 void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5], 
@@ -182,7 +182,9 @@ void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5],
       if(val == "on") { *on = true; }
       if(val == "pause") { *on = false; }
   } else if(option == "B") {
-      resetFunc();
+      messageLCD("reset all");
+      delay(500);
+      REQUEST_EXTERNAL_RESET;
   } else if(option == "C") {
     if(*on != true) {
       *mode = doc["value"];
@@ -191,7 +193,7 @@ void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5],
       X[0] = doc["SOC_init"];
       *R_x = doc["R_x"];
       *R_z = doc["R_z"];
-      *Qn_rated = doc["Qn_rated"];
+      *Qn_rated = doc["Qn_rated"]; *Qn_rated = *Qn_rated * 3600.0;
       *voltage_rated = doc["voltage_rated"];
       *current_rated = doc["current_rated"];
 
@@ -225,4 +227,5 @@ void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5],
         }
       }
   }
+  
 }
