@@ -1,15 +1,25 @@
-void printLCD(int option, double voltage, double current, double SOC, bool on, int mode, double temperature) {
+void printLCD(int option, double voltage, int Vnb, int Inb, double current, double SOC, bool on, int mode, double temperature) {
     lcd.clear();
     lcd.setCursor(0,0);
+    Serial.print("option = "); Serial.println(option);
+    Serial.print("voltage = "); Serial.println(voltage);
     
     if(option == 0) {
         lcd.print("Voltage :");
         lcd.setCursor(0, 1);
-        lcd.print(voltage);
+        char message[15];
+        sprintf(message, "BAT%d : %f",Vnb, voltage);
+        lcd.print(message);
     } else if(option == 1) {
         lcd.print("Current :");
         lcd.setCursor(0, 1);
-        lcd.print(current);
+        char message[16];
+        if(Inb == 0) {
+          sprintf(message, "BAT : %f", current);
+        } else {
+          sprintf(message, "SP : %f", current);
+        }
+        lcd.print(message);
     } else if(option == 2) {
         lcd.print("Mode :");
         lcd.setCursor(0, 1);
@@ -17,7 +27,9 @@ void printLCD(int option, double voltage, double current, double SOC, bool on, i
     } else if(option == 3) {
         lcd.print("SOC :");
         lcd.setCursor(0, 1);
-        lcd.print(SOC);
+        char message[15];
+        sprintf(message, "BAT%d : %f",Vnb, SOC);
+        lcd.print(message);
     } else if(option == 4) {
         lcd.print("State :");
         if(on) { 
@@ -30,7 +42,9 @@ void printLCD(int option, double voltage, double current, double SOC, bool on, i
     } else if(option == 5) {
         lcd.print("Temperature :");
         lcd.setCursor(0, 1);
-        lcd.print(temperature);
+        char message[15];
+        sprintf(message, "BAT%d : %f",Vnb, temperature);
+        lcd.print(message);
     }
 }
 
@@ -48,35 +62,40 @@ void messageLCD2Lines(String message1, String message2) {
     lcd.print(message2); 
 }
 
-bool activateClick(int *option) {
-    uint8_t buttons = lcd.readButtons();
+bool activateClick(int *option, int upPin, int downPin, int rightPin, int leftPin, bool *stateUP, bool *stateDOWN, bool *stateRIGHT, bool *stateLEFT) {
+    bool BUTTON_UP = digitalRead(upPin);
+    bool BUTTON_DOWN = digitalRead(downPin);
+    bool BUTTON_RIGHT = digitalRead(rightPin);
+    bool BUTTON_LEFT = digitalRead(leftPin);
+
     bool res = false;
-    if(buttons && (BUTTON_UP || BUTTON_DOWN || BUTTON_RIGHT)) {
+    if(BUTTON_UP != *stateUP || BUTTON_DOWN != *stateDOWN || BUTTON_RIGHT != *stateRIGHT) {
         lcd.clear();
         lcd.setCursor(0,0);
         lcd.print("Activate click ?");
-        Serial.println("yo");
     }
-    if (buttons & BUTTON_UP) {
+    if (BUTTON_UP != *stateUP) {
+      *stateUP = BUTTON_UP;
       if(*option < 1) {
         *option += 1;
       }
       lcd.setCursor(0, 1);
       lcd.print("Yes");
-      Serial.println("Up");
-      Serial.println(*option);
     }
-    if (buttons & BUTTON_DOWN) {
+    if (BUTTON_DOWN != *stateDOWN) {
+      *stateDOWN = BUTTON_DOWN;
       if(*option > 0) {
         *option -= 1;
       }
       lcd.setCursor(0, 1);
       lcd.print("No");
     }
-    if(buttons & BUTTON_RIGHT) {
+    if(BUTTON_RIGHT != *stateRIGHT) {
+      *stateRIGHT = BUTTON_RIGHT;
       res = true;
     }
-    if(buttons & BUTTON_LEFT) {
+    if(BUTTON_LEFT != *stateLEFT) {
+      *stateLEFT = BUTTON_LEFT;
       messageLCD("reset all");
       delay(500);
       REQUEST_EXTERNAL_RESET;
@@ -85,35 +104,58 @@ bool activateClick(int *option) {
 }
 
 
-void updateLCD(int *affichage, bool *on, int *mode, double Vt_Actual, double U, double X, double temperature) {
-    uint8_t buttons = lcd.readButtons();
-      if (buttons & BUTTON_UP) {
+void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *Inb, int nbBatteries, double *I, double *X, double *T, int upPin, int downPin, int rightPin, int leftPin, bool *stateUP, bool *stateDOWN, bool *stateRIGHT, bool *stateLEFT) {
+      bool BUTTON_UP = digitalRead(upPin);
+      bool BUTTON_DOWN = digitalRead(downPin);
+      bool BUTTON_RIGHT = digitalRead(rightPin);
+      bool BUTTON_LEFT = digitalRead(leftPin);
+    
+      if (BUTTON_UP != *stateUP) {
+        Serial.println("UP");
+        *stateUP = BUTTON_UP;
         if(*affichage < 5) {
           *affichage += 1;
-          printLCD(*affichage, Vt_Actual, U, X, *on, *mode, temperature);
+          printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb]);
         }
       }
-      if (buttons & BUTTON_DOWN) {
+      if (BUTTON_DOWN != *stateDOWN) {
+        *stateDOWN = BUTTON_DOWN;
+        Serial.print("DOWN");
         if(*affichage > 0) {
           *affichage -= 1;
-          printLCD(*affichage, Vt_Actual, U, X, *on, *mode, temperature);
+          printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb]);
         }
       }
-      if(buttons & BUTTON_RIGHT) {
+      if(BUTTON_RIGHT != *stateRIGHT) {
+        *stateRIGHT = BUTTON_RIGHT;
+        Serial.println("RIGHT");
         if(*affichage == 2) {
             *mode += 1;
             if(*mode > 2) {
               *mode = 0;
             }
-            printLCD(*affichage, Vt_Actual, U, X, *on, *mode, temperature);
+            printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb]);
         } else if(*affichage == 4) {
             *on = !*on;
-            printLCD(*affichage, Vt_Actual, U, X, *on, *mode, temperature);
+            printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb]);
+        } else if(*affichage == 0 || *affichage == 5 || *affichage == 3) {
+          *Vnb += 1;
+          if(*Vnb > nbBatteries-1) {
+              *Vnb = 0;
+            }
+        } else if(*affichage = 1) {
+          *Inb += 1;
+          if(*Inb > 1) {
+            *Inb = 0;
+          }
         }
       }
-      if(buttons & BUTTON_LEFT) {
+      if(BUTTON_LEFT != *stateLEFT) {
+        *stateLEFT = BUTTON_LEFT;
+        Serial.println("LEFT");
         messageLCD("reset all");
         delay(500);
         REQUEST_EXTERNAL_RESET;
       }
+      Serial.print("stateDOWN3 : "); Serial.println(*stateDOWN);
 }
