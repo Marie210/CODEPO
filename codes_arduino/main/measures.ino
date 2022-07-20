@@ -22,16 +22,16 @@ double measureVoltage(double R1, double R2, int numSamples, const byte VPin) {
 }
 
 
-double measureCurrent(int numSamples, double offset, double mvPerI) {
+double measureCurrent(int numSamples, double offset, double mvPerI, int pinCurrent, int pinVcc) {
   double sumCur = 0.0;
-  double Vref = 3.3; // tension de reference de l'arduino
+  double Vref = 3300; // tension de reference de l'arduino
   int counter = 0;
   double currentTime = 0.0;
   double I = 0.0;
   //Get numSamples sumCur  
   while(counter < numSamples) {
     if(micros() >= currentTime + 200) {
-      int meas = analogRead(pinI)-analogRead(VccIPin);
+      int meas = analogRead(pinCurrent)-analogRead(pinVcc);
       sumCur = sumCur + meas;  // Add sumCur together
       currentTime = micros();
       counter = counter + 1;
@@ -43,7 +43,6 @@ double measureCurrent(int numSamples, double offset, double mvPerI) {
   if(I < 0.3 && I > -0.3) {
     I = 0.0;
   }  
-  Serial.print("I = "); Serial.println(I);
   return I;
 }
 
@@ -57,9 +56,7 @@ double mesureTemperature(const byte TPin, const byte VccPin, double R, double RV
   double pas = Vin / 1023; // L'arduino pour ces mesures découpe 3.3V en 1023 valeurs discrètes
   
   int mesure_tension = analogRead(TPin);  // Lis la tension en un format digital compris entre 0 et 1023 (découpe 3.3V en 1024 parts égales)
-  Serial.println(mesure_tension);
   double Vcc = analogRead(VccPin) * (Vin / 1023.0) * ((RVcc1+RVcc2)/RVcc2);
-  Serial.println(Vcc);
   double tension = mesure_tension * pas; // Pour obtenir la tension sous format analogique il faut la multiplier par le pas
   
   // Calcul de la résistance
@@ -88,12 +85,11 @@ void takeMeasures(double *V, double *I, double *T, int nbBatteries, int nbCurren
     readAnalogMux(i, PIN_ADDR_A, PIN_ADDR_B, PIN_ADDR_C);
     V[i] = measureVoltage(RV, pot[i], numSamples, VPin);
     T[i] = mesureTemperature(TPin, VccPin, R, RVcc1, RVcc2);
-    Serial.print(i); Serial.print(" = "); Serial.println(T[i]);
     if(i < nbCurrent) {
       if(i == 0) {
-        I[i] = measureCurrent(numSamples, offset_20, mvPerI_20);
+        I[i] = measureCurrent(numSamples, offset_20, mvPerI_20, pinI, VccIPin);
       } else {
-        I[i] = measureCurrent(numSamples, offset_100, mvPerI_100);
+        I[i] = measureCurrent(numSamples, offset_100, mvPerI_100, pinISP, VccIPinSP);
       }
     }
   }
