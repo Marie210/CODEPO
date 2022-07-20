@@ -1,8 +1,6 @@
 void printLCD(int option, double voltage, int Vnb, int Inb, double current, double SOC, bool on, int mode, double temperature, int upPin, int downPin, int rightPin, int leftPin) {
     lcd.clear();
     lcd.setCursor(0,0);
-    Serial.print("option = "); Serial.println(option);
-    Serial.print("voltage = "); Serial.println(voltage);
     
     if(option == 0) {
         lcd.print("Voltage :");
@@ -111,7 +109,6 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
       bool BUTTON_LEFT = digitalRead(leftPin);
     
       if (BUTTON_UP != *stateUP) {
-        Serial.println("UP");
         *stateUP = BUTTON_UP;
         if(*affichage < 5) {
           *affichage += 1;
@@ -120,7 +117,6 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
       }
       if (BUTTON_DOWN != *stateDOWN) {
         *stateDOWN = BUTTON_DOWN;
-        Serial.print("DOWN");
         if(*affichage > 0) {
           *affichage -= 1;
           printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin);
@@ -128,7 +124,6 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
       }
       if(BUTTON_RIGHT != *stateRIGHT) {
         *stateRIGHT = BUTTON_RIGHT;
-        Serial.println("RIGHT");
         if(*affichage == 2) {
             *mode += 1;
             if(*mode > 2) {
@@ -152,10 +147,8 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
       }
       if(BUTTON_LEFT != *stateLEFT) {
         *stateLEFT = BUTTON_LEFT;
-        Serial.println("LEFT");
         messageLCD("reset all");
         delay(500);
         REQUEST_EXTERNAL_RESET;
       }
-      Serial.print("stateDOWN3 : "); Serial.println(*stateDOWN);
 }
