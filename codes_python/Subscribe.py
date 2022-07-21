@@ -1,45 +1,42 @@
-import paho.mqtt.client as mqtt  # Import the client class
 import time
 
-nbr_message = 0
-broker_address = "mqtt.thingstream.io"
-clientid = "device:94941562-fb03-4e61-b017-2926a1dab1ea"  # Change pour chaque thing.
+import paho.mqtt.client as mqtt
+import json
+from CSVconversion import traitement
+
+hostname = "mqtt.thingstream.io"
+clientid = "device:77d5e918-673f-4639-afa6-c08082db6802"
 username = "K7T841RL7HZ3P98IBS6J"
-password = "+Ettw+umgGa/JGo38eR+ZHXUHCpIupUaMTe1EyEt"  # Change pour chaque thing.
+password = "G5l/8382odCJ+u0DyE/agXzLzuhD14Hlcz3kEVQG"
 
+def readJson(jsonMessage) :
 
-def on_connect(client, userdata, flag, rc):  # Response to a connection event
-    print("Connected with result code " + str(rc) + "  (0: Connection successful / 1: Connection refused - incorrect protocol version / 2: Connection refused - invalid client identifier / 3: Connection refused - server unavailable / 4: Connection refused - bad username or password / 5: Connection refused)")  # rc is the connection result
-    if rc == 0:
-        client.subscribe(topic="TEST1", qos=1)  # subscribe to a topic with a qos
+    # remplace les single quotes par des double quotes
+    jsonMessage = jsonMessage.replace('\'', '\"')
+    # parse le message JSON
+    return json.loads(jsonMessage)
 
+def on_connect(client, userdata, flags, rc):
+    print("Connected with result code "+str(rc))
+    # Subscribing in on_connect() means that if we lose the connection and
+    # reconnect then subscriptions will be renewed.
+    if rc==0:
+        #subscribe to all topics
+        client.subscribe("Cameskin", 1)
+        
+def on_message(client, userdata, msg):
+   print(msg.topic+' '+str(msg.payload.decode("utf-8")))
+   ms = str(msg.payload.decode("utf-8"))
+   traitement(ms)
+   #message = readJson(str(msg.payload.decode("utf-8")))
+   #print(message)
 
-def on_message(client, userdata, msg):  # Response to a message received event
-    global nbr_message
-    time.sleep(1)  # wait a little to give the script time to process the callback
-    message_received = str(msg.payload.decode("utf-8"))
-    print("received message number " + str(nbr_message) + "=", message_received)
+client = mqtt.Client(client_id=clientid, clean_session = False)
+client.on_connect = on_connect
+client.on_message = on_message
+client.username_pw_set(username,password)
 
-    # Sauvegarde dans un fichier
-    data_f = "data" + str(nbr_message) + ".txt"
-    fichier = open(data_f, "a")
-    fichier.write(message_received)
-    fichier.close()
-
-    nbr_message += 1
-
-
-# Create client object with a persistent connection (!clean session), in this mode the broker will store subscription information, and undelivered messages for the client.
-client = mqtt.Client(client_id=clientid, clean_session=False)
-
-# Callbacks are functions that are called in response to an event, here we attach function to callback
-client.on_connect = on_connect  # Response to a connection event
-client.on_message = on_message  # Response to a message received event
-
-client.username_pw_set(username, password)
-
-# Connection to the brooker
-# port : the network port of the server host to connect to. Defaults to 1883.
-# keepalive : maximum period in seconds allowed between communications with the broker. If no other messages are being exchanged, this controls the rate at which the client will send ping messages to the broker
-client.connect(host=broker_address, port=1883, keepalive=600)
+#Insecure connection on port 1883 !!!
+client.connect(host=hostname, port=1883, keepalive=600)
 client.loop_forever()
+
