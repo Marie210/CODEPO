@@ -156,7 +156,7 @@ int publish(double Vt_Actual, double U, double X[3], double Z[5], double error, 
 }
 
 void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5], 
-              double SOCOCV[12], double dSOCOCV[11], double P_x[9], double P_z[25], double Q_x[9],
+              double SOCOCV[5], double dSOCOCV[4], double P_x[9], double P_z[25], double Q_x[9],
               double Q_z[25], double *R_x, double *R_z, double *Qn_rated, double *current_rated, double *voltage_rated) {
 
   // Allocate a temporary JsonDocument
@@ -198,11 +198,14 @@ void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5],
       Z[3] = R1 * C1;
       Z[4] = R2 * C2;
       
-      for (int i = 0; i < 12; i++) {
+      for (int i = 0; i < 5; i++) {
         SOCOCV[i] = doc["SOCOCV"][i];
+        if(i < 4) {
+          dSOCOCV[i] = doc["dSOCOCV"][i];
+        }
       }
     
-      for (int i = 0; i < 11; i++) {
+      for (int i = 0; i < 9; i++) {
         if(i%8 == 0) {
           P_x[i] = doc["P_x"];
           Q_x[i] = doc["Q_x"];
@@ -210,7 +213,6 @@ void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5],
           P_x[i] = 0.0;
           Q_x[i] = 0.0;
         }
-        dSOCOCV[i] = doc["dSOCOCV"][i];
       }
     
       for (int i = 0; i < 25; i++) {
