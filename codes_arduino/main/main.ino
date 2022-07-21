@@ -56,7 +56,7 @@ int Vnb = 0;
 int Inb = 0;
 double Valim = 0.0;
 double RV = 32300;
-double pot[nbBatteries] = {10280, 10280, 10280, 10280, 10280, 10280}; 
+double pot[nbBatteries] = {20400, 20400, 20400, 10000, 10000, 10000}; 
 double RVcc1 = 500000; 
 double RVcc2 = 500000;
 double RT = 4700;
@@ -68,11 +68,11 @@ double offset_20 = 0.36;
 double mvPerI_100 = 6.25;
 double offset_100 = 0.71;
 /* -- FILTRE KALMANN-- */
-char input[] = "{'C1': 1.704510181209152, 'C2': 1.528807876468525, 'R0': 0.045060113042053, 'R1': 0.022227266870883, 'R2': 0.041772924359798, 'SOCOCV': [-5899.08970208633, 33676.8099461629, -83441.9838542838, 117439.916788238, -103158.271786075, 58466.9571460381, -21320.9039215880, 4810.53130689387, -602.846517986747, 26.7902085666153, 3.13908872646908, 5.40144738302999], 'dSOCOCV': [-64889.9867229497, 336768.099461629, -750977.854688554, 939519.334305904, -722107.902502523, 350801.742876229, -106604.519607940, 19242.1252275755, -1808.53955396024, 53.5804171332306, 3.13908872646908], 'SOC_init': 1.0, 'P_x': 5e-7, 'P_z': 5e-5, 'Q_x': 1e-8, 'Q_z': 1e-8, 'R_x': 1, 'R_z': 10, 'Qn_rated': 1.3, 'voltage_rated': 2, 'current_rated': 1.3}";
+char input[] = "{'C1': 1.128555861058894e3, 'C2': 3.872412309575128e2, 'R0': 0.245610276594537, 'R1': 0.033871718690823, 'R2': 0.022658450007419, 'SOCOCV': [-5899.08970208633, 33676.8099461629, -83441.9838542838, 117439.916788238, -103158.271786075, 58466.9571460381, -21320.9039215880, 4810.53130689387, -602.846517986747, 26.7902085666153, 3.13908872646908, 5.40144738302999], 'dSOCOCV': [-64889.9867229497, 336768.099461629, -750977.854688554, 939519.334305904, -722107.902502523, 350801.742876229, -106604.519607940, 19242.1252275755, -1808.53955396024, 53.5804171332306, 3.13908872646908], 'SOC_init': 1.0, 'P_x': 5e-8, 'P_z': 5e-9, 'Q_x': 1e-10, 'Q_z': 1e-6, 'R_x': 0.1, 'R_z': 1, 'Qn_rated': 1.3, 'voltage_rated': 2, 'current_rated': 1.3}";
 double X[3*nbBatteries];
 double Z[5*nbBatteries];
-double SOCOCV[12];
-double dSOCOCV[11];
+double SOCOCV[5];
+double dSOCOCV[4];
 double P_x[9*nbBatteries];
 double P_z[25*nbBatteries];
 double Q_x[9*nbBatteries]; 
@@ -84,7 +84,7 @@ double Qn_rated;
 double voltage_rated;
 double current_rated;
 double error = 0.0;
-unsigned long kalmanTime = 0.0;
+double kalmanTime = 0.0;
 double SoC_coulomb[nbBatteries] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
 /* -- HPPC -- */
 bool onHPPC = false;
@@ -100,7 +100,7 @@ bool stateLEFT = 0;
 bool test = 0;
 double updateButtonTime = 200;
 /* -- DIVERS -- */
-int mode = 2, oldMode = 2; // default = 0
+int mode = 0, oldMode = 0; // default = 0
 int counter = 0;
 bool on = true; // default = false
 double seconds = 0.0;
@@ -188,9 +188,13 @@ void loop() {
         /* --- AFFICHAGE ---*/
         //sec = millis()*0.001;
     
-        DeltaT = millis()*0.001 - kalmanTime;
-        kalmanTime = millis()*0.001;
+        DeltaT = (double)(millis()*0.001 - kalmanTime);
+        kalmanTime = (double)(millis()*0.001);
+        //DeltaT = (double)(millis() - kalmanTime);
+        //kalmanTime = (double)(millis());
         //DeltaT = 0.5;
+        
+        Serial.print("---- DeltaT = "); Serial.println(DeltaT);
         
         /* --- COULOMB Counting ---*/
         for(int i = 0; i < nbBatteries; i++) {
@@ -198,15 +202,17 @@ void loop() {
         }
       
         /* --- KALMANN FILTER ---*/
-        double time1 = millis();
-        double time2 = millis();
-        for(int i = 0; i < nbBatteries; i++) { // Kalmann filter applied on each 
+        double time1 = micros();
+        double time2 = micros();
+        for(int i = 0; i < 1; i++) { // Kalmann filter applied on each 
            error = extendedKalmanFilter(I[0], X + 3*i, Z + 5*i, SOCOCV, dSOCOCV, V[i], P_x + 9*i, P_z + 25*i, Q_x + 9*i, Q_z + 25*i, R_x[i], R_z[i], DeltaT, Qn_rated);
-           Serial.print("Kalman "); Serial.print(i); Serial.print(" => "); Serial.println(millis() - time2);
-           time2 = millis();
+           Serial.print("------- Kalman "); Serial.print(i); Serial.print(" => "); Serial.print(micros() - time2); Serial.println(" us.");
+           Serial.print("SOC = "); Serial.println(X[3*i]);
+           
+           time2 = micros();
         }
-        double computationTimeMS = millis() - time1;
-        Serial.print("Total computation time : "); Serial.print(computationTimeMS); Serial.println(" ms.");
+        double computationTimeMS = micros() - time1;
+        Serial.print("Total computation time : "); Serial.print(computationTimeMS); Serial.println(" us.");
                 
         //String message = createData(V[0], U, X, Z, error);
         /* --- Publish at a certain frequency --- */
