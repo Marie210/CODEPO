@@ -1,11 +1,11 @@
-/*
+*
  * Academic License - for use in teaching, academic research, and meeting
  * course requirements at degree granting institutions only.  Not for
  * government, commercial, or other organizational use.
  * File: rtwtypes.h
  *
  * MATLAB Coder version            : 5.1
- * C/C++ source code generated on  : 15-Feb-2022 16:12:22
+ * C/C++ source code generated on  : 21-Jul-2022 14:32:40
  */
 
 #ifndef RTWTYPES_H
