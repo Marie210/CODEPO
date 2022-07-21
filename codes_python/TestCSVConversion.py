@@ -19,8 +19,11 @@ def readJson(jsonMessage) :
     return json.loads(jsonMessage)
 
 def convertToCsvBatteries(jsonLoad):
-    data = jsonLoad
-    batteries_data = data['batteries']
+#Convertie la partie des JSON relative aux batteries dans  un format CSV
+# input :  string json 
+# output : rien mais création d'un fichier CSV
+    data = jsonLoad #JSON
+    batteries_data = data['batteries']# Choisis les element relatif aux batteries
     # now we will open a file for writing
     data_file = open('batteries_data.csv', 'w')
     data_file.write("sep=,\n")
@@ -40,23 +43,24 @@ def convertToCsvBatteries(jsonLoad):
         csv_writer.writerow(emp.values())
 
     data_file.close()
-
+# Crée un nouveau fichier sans les sauts de lignes 
     with open('batteries_data.csv', newline='') as in_file:
         with open('batteries_data2.csv', 'w', newline='') as out_file:
             writer = csv.writer(out_file)
             for row in csv.reader(in_file):
                 if row:
+    
                     writer.writerow(row)
+    #On ferme les fichiers 
     in_file.close()
     out_file.close()
     
     
-    
-    
 def write_average_power(csv_name):
-    average_power  = Calcul_puissance_moyenne()
+# Ajoute la puissance théorique produite par les panneaux solaire 
+    average_power  = Calcul_puissance_moyenne() #Calcul de puissance théorique voir DC_conv.py
     data= []
-    lignes = []
+    lignes = [] #Liste des lignes 
     with open(csv_name, 'r') as f:
         for ligne in f : 
           data.append(ligne)
@@ -176,12 +180,12 @@ def add_csv(old,new):
         
         
         
-def taitement(text):       
+def traitement(text):       
     file_pv = "solar_data2.csv"
     file_pv_total ="solar_data_total.csv"
     file_batterie = "batteries_data2.csv"
     file_batterie_total= "batteries_data_total.csv"
-    #f =  open('ex_V2.txt')
+   # f =  open(text_file)
     #text = f.read()
     jsonMessage = readJson(text)
     convertToCsvBatteries(jsonMessage)
