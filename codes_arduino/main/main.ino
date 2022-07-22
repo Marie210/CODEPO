@@ -30,6 +30,7 @@ const byte VccIPin = A8;
 const byte VccPin = A2;
 const byte pinISP = A5;
 const byte VccIPinSP = A3;
+const byte VSPPin = A7;
 const byte TPin = A6;
 /* -- MULTIPLEXEUR -- */
 const byte PIN_ENABLE = 8;
@@ -51,7 +52,13 @@ const int nbCurrent = 2;
 double I[nbCurrent] = {0.0, 0.0};
 double V[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 double T[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+double IMean[nbCurrent] = {0.0, 0.0};
+double VMean[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+double TMean[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 double VSP = 0.0;
+double PMean = 0.0;
+double PSPMean = 0.0;
+int counterMean = 0;
 int Vnb = 0;
 int Inb = 0;
 double Valim = 0.0;
@@ -183,7 +190,7 @@ void loop() {
   else if(flag_init == 5) {
       if(mode == 0 && on) {
         /* --- Measure VOLTAGE + CURRENT + TEMP ---*/
-        takeMeasures(V, I, T, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, offset_20, offset_100, mvPerI_20, mvPerI_100);
+        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, &PMean, &PSPMean, VMean, IMean, TMean, &counterMean);
     
         /* --- AFFICHAGE ---*/
         //sec = millis()*0.001;
@@ -205,7 +212,7 @@ void loop() {
         double time1 = micros();
         double time2 = micros();
         for(int i = 0; i < 1; i++) { // Kalmann filter applied on each 
-           error = extendedKalmanFilter(I[0], X + 3*i, Z + 5*i, SOCOCV, dSOCOCV, V[i], P_x + 9*i, P_z + 25*i, Q_x + 9*i, Q_z + 25*i, R_x[i], R_z[i], DeltaT, Qn_rated);
+           extendedKalmanFilter(I[0], X + 3*i, Z + 5*i, SOCOCV, dSOCOCV, V[i], P_x + 9*i, P_z + 25*i, Q_x + 9*i, Q_z + 25*i, R_x[i], R_z[i], DeltaT, Qn_rated, &error);
            Serial.print("------- Kalman "); Serial.print(i); Serial.print(" => "); Serial.print(micros() - time2); Serial.println(" us.");
            Serial.print("SOC = "); Serial.println(X[3*i]);
            
@@ -250,7 +257,7 @@ void loop() {
         I[0] = measureCurrent(numSamples, offset_20, mvPerI_20, pinI, VccIPin);
         T[0] = mesureTemperature(TPin, VccPin, RT, RVcc1, RVcc2);
         */
-        takeMeasures(V, I, T, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, offset_20, offset_100, mvPerI_20, mvPerI_100);
+        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, &PMean, &PSPMean, VMean, IMean, TMean, &counterMean);
         sec = millis()*0.001;
         /* ---- save data to SD card ---- */
         printSd(V[0], I[1], sec, T[0]);
