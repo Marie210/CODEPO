@@ -40,13 +40,12 @@
  *                double DeltaT
  *                double Qn_rated
  *                double *Error_x
- *                double *TerminalVoltage
  * Return Type  : void
  */
 void extendedKalmanFilter(double U, double X[3], double Z[5], const double
   SOCOCV[5], const double dSOCOCV[4], double Vt_Actual, double P_x[9], double
   P_z[25], const double Q_x[9], const double Q_z[25], double R_x, double R_z,
-  double DeltaT, double Qn_rated, double *Error_x, double *TerminalVoltage)
+  double DeltaT, double Qn_rated, double *Error_x)
 {
   double c_I[25];
   double d_I[25];
@@ -65,6 +64,7 @@ void extendedKalmanFilter(double U, double X[3], double Z[5], const double
   double d1;
   double d2;
   double dOCV;
+  double TerminalVoltage;
   int A_tmp;
   int i;
   int i1;
@@ -128,10 +128,10 @@ void extendedKalmanFilter(double U, double X[3], double Z[5], const double
   }
 
   /*  Terminal voltage estimation */
-  *TerminalVoltage = ((SOC - Z[0] * U) - X[1]) - X[2];
+  TerminalVoltage = ((SOC - Z[0] * U) - X[1]) - X[2];
 
   /*  Calculate the Vt error */
-  *Error_x = Vt_Actual - *TerminalVoltage;
+  *Error_x = Vt_Actual - TerminalVoltage;
 
   /*  --- EKF ALGORITHM --- */
   /*  --> SOC ESTIMATION */
@@ -280,4 +280,3 @@ void extendedKalmanFilter(double U, double X[3], double Z[5], const double
  *
  * [EOF]
  */
-
