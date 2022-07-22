@@ -25,8 +25,7 @@ extern "C" {
   extern void extendedKalmanFilter(double U, double X[3], double Z[5], const
     double SOCOCV[5], const double dSOCOCV[4], double Vt_Actual, double P_x[9],
     double P_z[25], const double Q_x[9], const double Q_z[25], double R_x,
-    double R_z, double DeltaT, double Qn_rated, double *Error_x, double
-    *TerminalVoltage);
+    double R_z, double DeltaT, double Qn_rated, double *Error_x);
 
 #ifdef __cplusplus
 
