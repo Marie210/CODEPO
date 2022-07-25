@@ -131,28 +131,25 @@ int analyse (String st) {
   return res; 
 }
 
-int publish(double Vt_Actual, double U, double X[3], double Z[5], double error, double temperature){
 
-    char message[150];
-    if(isnan(X[0])) { X[0] = 0.0; }
-    if(isnan(error)) { error = 0.0; }
-    sprintf(message, "AT+IOTPUBLISH=\"TEST1\",1,\"{'tension': %f, 'courant': %f, 'Error': %f, 'SOC': %f, 'temperature' : %f}\"", Vt_Actual, U, error, X[0], temperature);
+void publish(int nbBatteries, double *VH, double *IH, double *SH, int *hourDay, int *minuteDay, int day, int month, int year, double *VMean, double *IMean, double *SMean, double *TMean, double VSPMean, double PMean, double PSPMean){
 
-    
-    // envoie du message vers le Thingstream click
-    Serial1.println(message);
-    
-    // verification si le message a bien été réceptionné ou non
-    /*
-    int flag = checkReception();
-    if(flag == 1) {
-      Serial.println("SUCCSESS -- envoie du message :");
-      Serial.println(message);
-    } else {
-      Serial.println("FAIL -- envoie du message :");
-      Serial.println(message);
+    char message[500];
+    sprintf(message, "AT+IOTPUBLISH=\"CAMSEKIN\",1,\"{'batteries':[");
+    for(int i = 0; i < nbBatteries; i++) {
+      int n = i*nbBatteries;
+      sprintf(message, "{'id':%d, 'S':[%f, %f, %f, %f, %f, %f],", SH[n+0], SH[n+1], SH[n+2], SH[n+3], SH[n+4], SMean[i]);
+      sprintf(message, "'V':[%f, %f, %f, %f, %f, %f],", VH[0], VH[1], VH[2], VH[3], VH[4], VMean[i]);
+      sprintf(message, "'I':[%f, %f, %f, %f, %f, %f]", IH[0], IH[1], IH[2], IH[3], IH[4], IH[5], IMean[0]);
+      if(i == 0) {
+        sprintf(message, ",'H':['%d:%d', '%d:%d', '%d:%d', '%d:%d', '%d:%d'], 'T':%f, 'P':%f, 'D': '%d-%d-%d'},", hourDay[0], minuteDay[0], hourDay[1], minuteDay[1], hourDay[2], minuteDay[2], hourDay[3], minuteDay[3], hourDay[4], minuteDay[4], TMean[i], PMean, day, month, year);
+      } else {
+        sprintf(message, "'T':%f, 'P':%f},",TMean[i], PMean);
+      }
     }
-    */
+    sprintf(message, "], 'solarPannels': [{'D': '%d-%d-%d', 'I': %f, 'V': %f, 'P': %f}]}", day, month, year, IMean[1], VSPMean, PSPMean);
+
+    Serial.print(" message = "); Serial.println(message);
 }
 
 void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5], 
