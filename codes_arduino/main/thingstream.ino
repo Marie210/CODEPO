@@ -134,22 +134,39 @@ int analyse (String st) {
 
 void publish(int nbBatteries, double *VH, double *IH, double *SH, int *hourDay, int *minuteDay, int day, int month, int year, double *VMean, double *IMean, double *SMean, double *TMean, double VSPMean, double PMean, double PSPMean){
 
-    char message[500];
-    sprintf(message, "AT+IOTPUBLISH=\"CAMSEKIN\",1,\"{'batteries':[");
+    char message[10000] = "\0";
+    char res[500];
+    sprintf(res, "AT+IOTPUBLISH=\"Cameskin\",1,\"{'batteries':[");
+    strcat(message, res);
     for(int i = 0; i < nbBatteries; i++) {
       int n = i*nbBatteries;
-      sprintf(message, "{'id':%d, 'S':[%f, %f, %f, %f, %f, %f],", SH[n+0], SH[n+1], SH[n+2], SH[n+3], SH[n+4], SMean[i]);
-      sprintf(message, "'V':[%f, %f, %f, %f, %f, %f],", VH[0], VH[1], VH[2], VH[3], VH[4], VMean[i]);
-      sprintf(message, "'I':[%f, %f, %f, %f, %f, %f]", IH[0], IH[1], IH[2], IH[3], IH[4], IH[5], IMean[0]);
+      sprintf(res, "{'id':%d, 'S':[%0.1f, %0.1f, %0.1f, %0.1f, %0.1f, %0.1f],", i, SH[n+0], SH[n+1], SH[n+2], SH[n+3], SH[n+4], SMean[i]);
+      strcat(message, res);
+      sprintf(res, "'V':[%0.1f, %0.1f, %0.1f, %0.1f, %0.1f, %0.1f],", VH[0], VH[1], VH[2], VH[3], VH[4], VMean[i]);
+      strcat(message, res);
+      sprintf(res, "'I':[%0.1f, %0.1f, %0.1f, %0.1f, %0.1f, %0.1f]", IH[0], IH[1], IH[2], IH[3], IH[4], IH[5], IMean[0]);
+      strcat(message, res);
       if(i == 0) {
-        sprintf(message, ",'H':['%d:%d', '%d:%d', '%d:%d', '%d:%d', '%d:%d'], 'T':%f, 'P':%f, 'D': '%d-%d-%d'},", hourDay[0], minuteDay[0], hourDay[1], minuteDay[1], hourDay[2], minuteDay[2], hourDay[3], minuteDay[3], hourDay[4], minuteDay[4], TMean[i], PMean, day, month, year);
-      } else {
-        sprintf(message, "'T':%f, 'P':%f},",TMean[i], PMean);
+        sprintf(res, ",'H':['%d:%d', '%d:%d', '%d:%d', '%d:%d', '%d:%d'], 'T':%0.1f, 'P':%0.1f, 'D': '%d-%d-%d'},", hourDay[0], minuteDay[0], hourDay[1], minuteDay[1], hourDay[2], minuteDay[2], hourDay[3], minuteDay[3], hourDay[4], minuteDay[4], TMean[i], PMean, day, month, year);
+      } else if(i == nbBatteries-1) {
+        sprintf(res, ",'T':%0.1f, 'P':%0.1f}",TMean[i], PMean);
       }
+      else {
+        sprintf(res, ",'T':%0.1f, 'P':%0.1f},",TMean[i], PMean);
+      }
+      strcat(message, res);
     }
-    sprintf(message, "], 'solarPannels': [{'D': '%d-%d-%d', 'I': %f, 'V': %f, 'P': %f}]}", day, month, year, IMean[1], VSPMean, PSPMean);
+    sprintf(res, "], 'solarPannels': [{'D': '%d-%d-%d', 'I': %0.1f, 'V': %0.1f, 'P': %0.1f}]}\"", day, month, year, IMean[1], VSPMean, PSPMean);
+    strcat(message, res);
+    Serial.println("message :");
+    Serial.println(message);
 
-    Serial.print(" message = "); Serial.println(message);
+    Serial1.println(message);
+    if(checkReception() == 1) { 
+       messageLCD("publish : success");
+    } else {
+      messageLCD("publish : fail");
+    }
 }
 
 void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5], 
@@ -222,5 +239,4 @@ void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5],
         }
       }
   }
-  
 }
