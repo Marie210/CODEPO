@@ -11,6 +11,7 @@
 #include <SD.h>
 #include <SPI.h>
 #include <LiquidCrystal_I2C.h>
+#include <RTCDue.h>
 
 /* ----- PIN DECLARATION ----- */
 const int CS_PIN = 4;
@@ -55,7 +56,10 @@ double T[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 double IMean[nbCurrent] = {0.0, 0.0};
 double VMean[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 double TMean[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+double SMean[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 double VSP = 0.0;
+double VSPMean = 0.0;
+double ISPMean = 0.0;
 double PMean = 0.0;
 double PSPMean = 0.0;
 int counterMean = 0;
@@ -106,11 +110,20 @@ bool stateRIGHT = 0;
 bool stateLEFT = 0;
 bool test = 0;
 double updateButtonTime = 200;
+/* -- CLOCK -- */
+RTCDue rtc(XTAL); // Select the Slowclock source
+int hours = 0, minutes = 0, seconds = 0; // heure - minute - seconde
+int day = 0, month = 0, year = 0; // jour - mois - année
+int hourDay[5], minuteDay[5];
+double VH[5*nbBatteries], IH[5*nbBatteries], SH[5*nbBatteries];
+double listheure[5] = {16, 21, 1, 6, 11}; 
+double HTime = 0.0, updateHTime = 0.0;
+bool checkH[5] = {false, false, false, false, false};
+int Hcounter = 0;
 /* -- DIVERS -- */
 int mode = 0, oldMode = 0; // default = 0
 int counter = 0;
 bool on = true; // default = false
-double seconds = 0.0;
 double sec = 0.0;
 int affichage = 0;
 unsigned long previous_millis = 0;  
@@ -127,7 +140,7 @@ void setup() {
   Serial1.begin(115200);                  
 
   /*--- Initialisation de la carte SD ---*/
-  initializeSD();
+  //initializeSD();
 
   /*--- Initialisation LCD ---*/
   
@@ -152,6 +165,11 @@ void setup() {
   stateDOWN = digitalRead(downPin);
   stateRIGHT = digitalRead(rightPin);
   stateLEFT = digitalRead(leftPin);
+
+  /* -- initialisation clock -- */
+  rtc.begin();
+  rtc.setTime(hours, minutes, seconds);
+  rtc.setDate(day, month, year);
 
   /* --- Initialisation du multiplexeur --- */
   // Output à 000
@@ -190,8 +208,8 @@ void loop() {
   else if(flag_init == 5) {
       if(mode == 0 && on) {
         /* --- Measure VOLTAGE + CURRENT + TEMP ---*/
-        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, &PMean, &PSPMean, VMean, IMean, TMean, &counterMean);
-    
+        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, &PMean, &PSPMean, VMean, IMean, TMean, &VSPMean, &counterMean, X, SMean);
+        
         /* --- AFFICHAGE ---*/
         //sec = millis()*0.001;
     
@@ -226,7 +244,7 @@ void loop() {
         if (millis()  >=  previous_millis + 60000 && flag_publish == 1 && initClick == true) {
           previous_millis =  millis();
           Serial.print("publish");
-          publish(V[0], I[0], X, Z, error, T[0]);
+          //publish(V[0], I[0], X, Z, error, T[0]);
         }
       
     } else if(mode == 1 && on) {
@@ -257,7 +275,7 @@ void loop() {
         I[0] = measureCurrent(numSamples, offset_20, mvPerI_20, pinI, VccIPin);
         T[0] = mesureTemperature(TPin, VccPin, RT, RVcc1, RVcc2);
         */
-        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, &PMean, &PSPMean, VMean, IMean, TMean, &counterMean);
+        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, &PMean, &PSPMean, VMean, IMean, TMean, &VSPMean, &counterMean, X, SMean);
         sec = millis()*0.001;
         /* ---- save data to SD card ---- */
         printSd(V[0], I[1], sec, T[0]);
@@ -271,6 +289,26 @@ void loop() {
     if(millis() - lcdTime > updateLCDTime) {
       lcdTime = millis();
       printLCD(affichage, V[Vnb], Vnb, Inb, I[Inb], X[Vnb*3], on, mode, T[Vnb], upPin, downPin, rightPin, leftPin);
+    }
+    
+    if(millis() - HTime > updateHTime) {
+      if(rtc.getHours() == listheure[Hcounter] && checkH[Hcounter] == false) {
+        checkH[Hcounter] = true;
+        hourDay[Hcounter] = rtc.getHours();
+        minuteDay[Hcounter] = rtc.getMinutes();
+        for(int i = 0; i < nbBatteries; i++) {
+          VH[5*i + Hcounter] = V[i];
+          IH[5*i + Hcounter] = I[i];
+          SH[5*i + Hcounter] = X[3*i];
+        }
+        Hcounter += 1;
+        if(Hcounter == 5) {
+          day = rtc.getDay();
+          month = rtc.getMonth();
+          year = rtc.getYear();
+          publish(nbBatteries, VH, IH, SH, hourDay, minuteDay, day, month, year, VMean, IMean, SMean, TMean, VSPMean, PMean, PSPMean);
+        }
+      }
     }
 
     if(oldMode != mode) {
@@ -288,5 +326,4 @@ void loop() {
       convertMessage(receivedMessage, &on, &mode, X, Z, SOCOCV, dSOCOCV, P_x, P_z, Q_x, Q_z, R_x, R_z, &Qn_rated, &current_rated, &voltage_rated);
       duplicate(X, Z, P_x, P_z, Q_x, Q_z, R_x, R_z, nbBatteries);
    }
-
 }
