@@ -1,4 +1,4 @@
-void printLCD(int option, double voltage, int Vnb, int Inb, double current, double SOC, bool on, int mode, double temperature, int upPin, int downPin, int rightPin, int leftPin) {
+void printLCD(int option, double voltage, int Vnb, int Inb, double current, double SOC, bool on, int mode, double temperature, int upPin, int downPin, int rightPin, int leftPin, int d ,int mo, int ye,  int h,  int mi,  int s) {
     lcd.clear();
     lcd.setCursor(0,0);
     
@@ -44,6 +44,21 @@ void printLCD(int option, double voltage, int Vnb, int Inb, double current, doub
         sprintf(message, "BAT%d : %f",Vnb, temperature);
         lcd.print(message);
     }
+    else if (option == 6){
+      lcd.print("Date :") ;  
+      lcd.setCursor(0,1) ; 
+      char message[25];  
+      sprintf(message, "%d-%d-%d", d, mo, ye) ;  
+      lcd.print(message);
+      
+    }
+    else if (option == 7) {
+      lcd.print("Heure :") ;  
+      lcd.setCursor(0,1) ; 
+      char message[15];  
+      sprintf(message, "%d:%d:%d", h, mi, s) ;  
+      lcd.print(message);
+    }
 }
 
 void messageLCD(String message) {
@@ -73,7 +88,6 @@ bool activateClick(int *option, int upPin, int downPin, int rightPin, int leftPi
         lcd.print("Activate click ?");
     }
     if (BUTTON_UP != *stateUP) {
-      Serial.println("---UP");
       *stateUP = BUTTON_UP;
       if(*option < 1) {
         *option += 1;
@@ -82,7 +96,6 @@ bool activateClick(int *option, int upPin, int downPin, int rightPin, int leftPi
       lcd.print("Yes");
     }
     if (BUTTON_DOWN != *stateDOWN) {
-      Serial.println("---DOWN");
       *stateDOWN = BUTTON_DOWN;
       if(*option > 0) {
         *option -= 1;
@@ -91,12 +104,10 @@ bool activateClick(int *option, int upPin, int downPin, int rightPin, int leftPi
       lcd.print("No");
     }
     if(BUTTON_RIGHT != *stateRIGHT) {
-      Serial.println("---SELECT");
       *stateRIGHT = BUTTON_RIGHT;
       res = true;
     }
     if(BUTTON_LEFT != *stateLEFT) {
-      Serial.println("---RESET");
       *stateLEFT = BUTTON_LEFT;
       messageLCD("reset all");
       delay(500);
@@ -106,7 +117,7 @@ bool activateClick(int *option, int upPin, int downPin, int rightPin, int leftPi
 }
 
 
-void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *Inb, int nbBatteries, double *I, double *X, double *T, int upPin, int downPin, int rightPin, int leftPin, bool *stateUP, bool *stateDOWN, bool *stateRIGHT, bool *stateLEFT) {
+void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *Inb, int nbBatteries, double *I, double *X, double *T, int upPin, int downPin, int rightPin, int leftPin, bool *stateUP, bool *stateDOWN, bool *stateRIGHT, bool *stateLEFT,int *d, int *mo, int *y, int *h, int *mi, int *s, int *count_push) {
       bool BUTTON_UP = digitalRead(upPin);
       bool BUTTON_DOWN = digitalRead(downPin);
       bool BUTTON_RIGHT = digitalRead(rightPin);
@@ -115,42 +126,87 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
       if (BUTTON_UP != *stateUP) {
         Serial.println("---UP");
         *stateUP = BUTTON_UP;
-        if(*affichage < 5) {
+        if(*affichage < 7 && *count_push == 0) {
           *affichage += 1;
-          printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin);
-        }
+        } else if(*affichage == 6) {
+          if(*count_push == 1) {
+            *d -= 1;
+            if (*d < 1) { *d = 1; }
+          } else if(*count_push == 2) {
+            *mo -= 1;
+            if (*mo < 1){ *mo = 1; }
+          } else if(*count_push == 3) {
+            *y -= 1;
+            if(*y < 2000) { *y = 2000; }
+          }
+        } else if(*affichage == 7) {
+          if(*count_push == 1) {
+            *h -= 1;
+            if (*h < 0) { *h = 0; }
+          } else if(*count_push == 2) {
+            *mi -= 1;
+            if (*mi < 0){ *mi = 0; }
+          } else if(*count_push == 3) {
+            *s -= 1;
+            if(*s < 0) { *s = 0; }
+          }
+        } 
+        printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin, *d, *mo, *y, *h, *mi, *s);
       }
       if (BUTTON_DOWN != *stateDOWN) {
         Serial.println("---DOWN");
         *stateDOWN = BUTTON_DOWN;
-        if(*affichage > 0) {
+        if(*affichage > 0 && *count_push == 0) {
           *affichage -= 1;
-          printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin);
+        } else if(*affichage == 6) {
+          if(*count_push == 1) {
+            *d += 1;
+            if (*d > 31) { *d = 1; }
+          } else if(*count_push == 2) {
+            *mo += 1;
+            if (*mo > 12){ *mo = 1; }
+          } else if(*count_push == 3) {
+            *y += 1;
+          }
+        } else if(*affichage == 7) {
+          if(*count_push == 1) {
+            *h += 1;
+            if (*h > 24) { *d = 0; }
+          } else if(*count_push == 2) {
+            *mi += 1;
+            if (*mi > 60){ *mi = 0; }
+          } else if(*count_push == 3) {
+            *s += 1;
+            if (*s > 60){ *s = 0; }
+          }
         }
+        printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin, *d, *mo, *y, *h, *mi, *s);
       }
       if(BUTTON_RIGHT != *stateRIGHT) {
-        *stateRIGHT = BUTTON_RIGHT;
         Serial.println("---SELECT");
+        *stateRIGHT = BUTTON_RIGHT; 
         if(*affichage == 2) {
             *mode += 1;
             if(*mode > 2) {
               *mode = 0;
             }
-            printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin);
         } else if(*affichage == 4) {
             *on = !*on;
-            printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin);
         } else if(*affichage == 0 || *affichage == 5 || *affichage == 3) {
           *Vnb += 1;
           if(*Vnb > nbBatteries-1) {
               *Vnb = 0;
             }
-        } else if(*affichage = 1) {
+        } else if(*affichage == 1) {
           *Inb += 1;
           if(*Inb > 1) {
             *Inb = 0;
           }
+        } else if(*affichage == 6 || *affichage == 7) {
+          *count_push += 1;
+          if (*count_push == 4) { *count_push = 0; }
         }
+        printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin, *d, *mo, *y, *h, *mi, *s);
       }
       if(BUTTON_LEFT != *stateLEFT) {
         Serial.println("---RESET");
