@@ -80,7 +80,7 @@ double readAnalogMux(int channel, int PIN_ADDR_A, int PIN_ADDR_B, int PIN_ADDR_C
   digitalWrite(PIN_ADDR_C, bitRead(channel, 2));
 }
 
-void takeMeasures(double *V, double *I, double *T, double *VSP, int nbBatteries, int nbCurrent, double RV, double *pot, int numSamples, double R, double RVcc1, double RVcc2, double RSP1, double RSP2, double offset_20, double offset_100, double mvPerI_20, double mvPerI_100, double *PMean, double *PSPMean, double *VMean, double *IMean, double *TMean, int *counterMean) {
+void takeMeasures(double *V, double *I, double *T, double *VSP, int nbBatteries, int nbCurrent, double RV, double *pot, int numSamples, double R, double RVcc1, double RVcc2, double RSP1, double RSP2, double offset_20, double offset_100, double mvPerI_20, double mvPerI_100, double *PMean, double *PSPMean, double *VMean, double *IMean, double *TMean, double *VSPMean, int *counterMean, double *X, double *SMean) {
   for(int i = 0; i < nbBatteries; i++){
     readAnalogMux(i, PIN_ADDR_A, PIN_ADDR_B, PIN_ADDR_C);
     V[i] = measureVoltage(RV, pot[i], numSamples, VPin);
@@ -95,8 +95,10 @@ void takeMeasures(double *V, double *I, double *T, double *VSP, int nbBatteries,
     }
     VMean[i] += V[i];
     TMean[i] += T[i];
+    SMean[i] += X[3*i];
   }
   *VSP = measureVoltage(RSP1, RSP2, numSamples, VSPPin);
+  *VSPMean += *VSP;
   *PMean += V[0]*I[0];
   *PSPMean += (*VSP)*I[1];
   *counterMean += 1;
