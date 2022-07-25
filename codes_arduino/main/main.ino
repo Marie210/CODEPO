@@ -113,13 +113,14 @@ double updateButtonTime = 200;
 /* -- CLOCK -- */
 RTCDue rtc(XTAL); // Select the Slowclock source
 int hours = 0, minutes = 0, seconds = 0; // heure - minute - seconde
-int day = 0, month = 0, year = 0; // jour - mois - année
+int day = 25, month = 7, year = 2022; // jour - mois - année
 int hourDay[5], minuteDay[5];
 double VH[5*nbBatteries], IH[5*nbBatteries], SH[5*nbBatteries];
-double listheure[5] = {16, 21, 1, 6, 11}; 
+double listheure[5] = {0, 0, 0, 0, 0}; 
 double HTime = 0.0, updateHTime = 0.0;
 bool checkH[5] = {false, false, false, false, false};
 int Hcounter = 0;
+int count_push = 0;
 /* -- DIVERS -- */
 int mode = 0, oldMode = 0; // default = 0
 int counter = 0;
@@ -219,7 +220,7 @@ void loop() {
         //kalmanTime = (double)(millis());
         //DeltaT = 0.5;
         
-        Serial.print("---- DeltaT = "); Serial.println(DeltaT);
+        //Serial.print("---- DeltaT = "); Serial.println(DeltaT);
         
         /* --- COULOMB Counting ---*/
         for(int i = 0; i < nbBatteries; i++) {
@@ -231,21 +232,13 @@ void loop() {
         double time2 = micros();
         for(int i = 0; i < 1; i++) { // Kalmann filter applied on each 
            extendedKalmanFilter(I[0], X + 3*i, Z + 5*i, SOCOCV, dSOCOCV, V[i], P_x + 9*i, P_z + 25*i, Q_x + 9*i, Q_z + 25*i, R_x[i], R_z[i], DeltaT, Qn_rated, &error);
-           Serial.print("------- Kalman "); Serial.print(i); Serial.print(" => "); Serial.print(micros() - time2); Serial.println(" us.");
-           Serial.print("SOC = "); Serial.println(X[3*i]);
+           //Serial.print("------- Kalman "); Serial.print(i); Serial.print(" => "); Serial.print(micros() - time2); Serial.println(" us.");
+           //Serial.print("SOC = "); Serial.println(X[3*i]);
            
            time2 = micros();
         }
         double computationTimeMS = micros() - time1;
-        Serial.print("Total computation time : "); Serial.print(computationTimeMS); Serial.println(" us.");
-                
-        //String message = createData(V[0], U, X, Z, error);
-        /* --- Publish at a certain frequency --- */
-        if (millis()  >=  previous_millis + 60000 && flag_publish == 1 && initClick == true) {
-          previous_millis =  millis();
-          Serial.print("publish");
-          //publish(V[0], I[0], X, Z, error, T[0]);
-        }
+        //Serial.print("Total computation time : "); Serial.print(computationTimeMS); Serial.println(" us.");
       
     } else if(mode == 1 && on) {
 
@@ -283,13 +276,13 @@ void loop() {
 
     if(millis() - buttonTime > updateButtonTime) {
       buttonTime = millis();
-      updateLCD(&affichage, &on, &mode, V, &Vnb, &Inb, nbBatteries, I, X, T, upPin, downPin, rightPin, leftPin, &stateUP, &test, &stateRIGHT, &stateLEFT);
-    }
+      updateLCD(&affichage, &on, &mode, V, &Vnb, &Inb, nbBatteries, I, X, T, upPin, downPin, rightPin, leftPin, &stateUP, &test, &stateRIGHT, &stateLEFT, &day, &month, &year, &hours, &minutes, &seconds, &count_push);    }
 
     if(millis() - lcdTime > updateLCDTime) {
       lcdTime = millis();
-      printLCD(affichage, V[Vnb], Vnb, Inb, I[Inb], X[Vnb*3], on, mode, T[Vnb], upPin, downPin, rightPin, leftPin);
+      printLCD(affichage, V[Vnb], Vnb, Inb, I[Inb], X[(Vnb)*3], on, mode, T[Vnb], upPin, downPin, rightPin, leftPin, day, month, year, hours, minutes, seconds);
     }
+
     
     if(millis() - HTime > updateHTime) {
       if(rtc.getHours() == listheure[Hcounter] && checkH[Hcounter] == false) {
@@ -298,7 +291,7 @@ void loop() {
         minuteDay[Hcounter] = rtc.getMinutes();
         for(int i = 0; i < nbBatteries; i++) {
           VH[5*i + Hcounter] = V[i];
-          IH[5*i + Hcounter] = I[i];
+          IH[5*i + Hcounter] = I[0];
           SH[5*i + Hcounter] = X[3*i];
         }
         Hcounter += 1;
@@ -310,6 +303,7 @@ void loop() {
         }
       }
     }
+    
 
     if(oldMode != mode) {
       digitalWrite(relayPin,HIGH);
