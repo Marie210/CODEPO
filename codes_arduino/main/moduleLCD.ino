@@ -73,6 +73,7 @@ bool activateClick(int *option, int upPin, int downPin, int rightPin, int leftPi
         lcd.print("Activate click ?");
     }
     if (BUTTON_UP != *stateUP) {
+      Serial.println("---UP");
       *stateUP = BUTTON_UP;
       if(*option < 1) {
         *option += 1;
@@ -81,6 +82,7 @@ bool activateClick(int *option, int upPin, int downPin, int rightPin, int leftPi
       lcd.print("Yes");
     }
     if (BUTTON_DOWN != *stateDOWN) {
+      Serial.println("---DOWN");
       *stateDOWN = BUTTON_DOWN;
       if(*option > 0) {
         *option -= 1;
@@ -89,10 +91,12 @@ bool activateClick(int *option, int upPin, int downPin, int rightPin, int leftPi
       lcd.print("No");
     }
     if(BUTTON_RIGHT != *stateRIGHT) {
+      Serial.println("---SELECT");
       *stateRIGHT = BUTTON_RIGHT;
       res = true;
     }
     if(BUTTON_LEFT != *stateLEFT) {
+      Serial.println("---RESET");
       *stateLEFT = BUTTON_LEFT;
       messageLCD("reset all");
       delay(500);
@@ -109,6 +113,7 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
       bool BUTTON_LEFT = digitalRead(leftPin);
     
       if (BUTTON_UP != *stateUP) {
+        Serial.println("---UP");
         *stateUP = BUTTON_UP;
         if(*affichage < 5) {
           *affichage += 1;
@@ -116,6 +121,7 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
         }
       }
       if (BUTTON_DOWN != *stateDOWN) {
+        Serial.println("---DOWN");
         *stateDOWN = BUTTON_DOWN;
         if(*affichage > 0) {
           *affichage -= 1;
@@ -124,6 +130,7 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
       }
       if(BUTTON_RIGHT != *stateRIGHT) {
         *stateRIGHT = BUTTON_RIGHT;
+        Serial.println("---SELECT");
         if(*affichage == 2) {
             *mode += 1;
             if(*mode > 2) {
@@ -146,6 +153,7 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
         }
       }
       if(BUTTON_LEFT != *stateLEFT) {
+        Serial.println("---RESET");
         *stateLEFT = BUTTON_LEFT;
         messageLCD("reset all");
         delay(500);
