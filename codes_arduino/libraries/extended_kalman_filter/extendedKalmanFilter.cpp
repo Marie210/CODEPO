@@ -2,10 +2,10 @@
  * Academic License - for use in teaching, academic research, and meeting
  * course requirements at degree granting institutions only.  Not for
  * government, commercial, or other organizational use.
- * File: extendedKalmanFilter.c
+ * File: extendedKalmanFilter1RC.c
  *
  * MATLAB Coder version            : 5.1
- * C/C++ source code generated on  : 21-Jul-2022 14:32:40
+ * C/C++ source code generated on  : 28-Jul-2022 14:01:04
  */
 
 /* Include Files */
@@ -25,58 +25,67 @@
  *  R_x / R_z     = bruits gaussiens de la mesure
  *  DeltaT        = période d'échantillonage
  *  Qn_rated      = capacité nominale des batteries
- * Arguments    : double U
- *                double X[3]
- *                double Z[5]
+ * Arguments    : double b_I
+ *                double I2
+ *                double X[2]
+ *                double Z[3]
  *                const double SOCOCV[5]
  *                const double dSOCOCV[4]
  *                double Vt_Actual
- *                double P_x[9]
- *                double P_z[25]
- *                const double Q_x[9]
- *                const double Q_z[25]
- *                double R_x
- *                double R_z
+ *                double P_x[4]
+ *                double P_z[9]
+ *                const double Q_x[4]
+ *                const double Q_z[9]
+ *                double *betha_x
+ *                double *betha_z
+ *                double *alpha_x
+ *                double *alpha_z
+ *                double rho_x
+ *                double rho_z
  *                double DeltaT
  *                double Qn_rated
- *                double *Error_x
- * Return Type  : void
+ * Return Type  : double
  */
-void extendedKalmanFilter(double U, double X[3], double Z[5], const double
-  SOCOCV[5], const double dSOCOCV[4], double Vt_Actual, double P_x[9], double
-  P_z[25], const double Q_x[9], const double Q_z[25], double R_x, double R_z,
-  double DeltaT, double Qn_rated, double *Error_x)
+double extendedKalmanFilter(double b_I, double I2, double X[2], double Z[3],
+  const double SOCOCV[5], const double dSOCOCV[4], double Vt_Actual, double P_x
+  [4], double P_z[9], const double Q_x[4], const double Q_z[9], double *betha_x,
+  double *betha_z, double *alpha_x, double *alpha_z, double rho_x, double rho_z,
+  double DeltaT, double Qn_rated)
 {
-  double c_I[25];
-  double d_I[25];
-  double dv[15];
-  double A[9];
-  double b_A[9];
-  double C_z[5];
-  double KalmanGain_z[5];
-  double C_x[3];
-  double KalmanGain_x[3];
-  double c_A[3];
+  double P_zb[9];
+  double d_I[9];
+  double dv[6];
+  double Fk[4];
+  double b_Fk[4];
+  double C_z[3];
+  double KalmanGain_z[3];
+  double KalmanGain_x[2];
+  double Error_x;
+  double OCV;
   double SOC;
-  double a1_tmp;
-  double a2_tmp;
+  double TerminalVoltage;
+  double Xb_idx_0;
+  double Xb_idx_1;
+  double Zb_idx_0;
+  double Zb_idx_1;
+  double Zb_idx_2;
+  double b_C_z;
+  double betha_xb;
+  double betha_zb;
   double d;
   double d1;
-  double d2;
   double dOCV;
-  double TerminalVoltage;
-  int A_tmp;
+  int I_tmp;
+  int b_i;
   int i;
-  int i1;
-  signed char b_I[25];
+  signed char c_I[9];
 
   /*  States */
   SOC = X[0];
 
   /*  Parameters */
   /*  Coef in A : Fk : State transition matrix */
-  a1_tmp = exp(-DeltaT / Z[3]);
-  a2_tmp = exp(-DeltaT / Z[4]);
+  betha_xb = exp(-DeltaT / Z[2]);
 
   /*  Coef in B : Gk : Input control matrix */
   /*  Coef in mat : dXk/dThetak */
@@ -88,195 +97,183 @@ void extendedKalmanFilter(double U, double X[3], double Z[5], const double
     dOCV = 0.0;
   }
 
-  C_x[0] = dOCV;
-  C_x[1] = -1.0;
-  C_x[2] = -1.0;
-
   /*  Hx : Jacobian measurement matrix of x */
-  /*  dXk/dThetak */
   dv[1] = 0.0;
-  d = DeltaT / (Z[3] * Z[3]);
-  dv[4] = -U * (exp(d) - 1.0);
-  dv[7] = 0.0;
-  dv[10] = d * (X[1] - Z[1] * U) * exp(DeltaT / Z[3]);
-  dv[13] = 0.0;
-  dv[2] = 0.0;
-  dv[5] = 0.0;
-  d = DeltaT / (Z[4] * Z[4]);
-  dv[8] = -U * (exp(d) - 1.0);
-  dv[11] = 0.0;
-  dv[14] = d * (X[2] - Z[2] * U) * exp(DeltaT / Z[4]);
-  for (i = 0; i < 5; i++) {
-    dv[3 * i] = 0.0;
-    KalmanGain_z[i] = (dOCV * 0.0 + -dv[3 * i + 1]) + -dv[3 * i + 2];
+  d = DeltaT / (Z[2] * Z[2]);
+  dv[3] = -b_I * (exp(d) - 1.0);
+  dv[5] = d * (X[1] - Z[1] * b_I) * exp(DeltaT / Z[2]);
+  for (i = 0; i < 3; i++) {
+    I_tmp = i << 1;
+    dv[I_tmp] = 0.0;
+    KalmanGain_z[i] = dOCV * 0.0 + -dv[I_tmp + 1];
   }
 
-  C_z[0] = -U + KalmanGain_z[0];
+  C_z[0] = -b_I + KalmanGain_z[0];
   C_z[1] = KalmanGain_z[1];
   C_z[2] = KalmanGain_z[2];
-  C_z[3] = KalmanGain_z[3];
-  C_z[4] = KalmanGain_z[4];
 
   /*  Htheta : Jacobian measurement matrix of theta */
   /*  Knowing SOC, we can compute OCV thanks to the relationship SOC-OCV */
-  SOC = SOC * (SOC * (SOC * (SOC * SOCOCV[0] + SOCOCV[1]) + SOCOCV[2]) + SOCOCV
+  OCV = SOC * (SOC * (SOC * (SOC * SOCOCV[0] + SOCOCV[1]) + SOCOCV[2]) + SOCOCV
                [3]) + SOCOCV[4];
 
   /*  calculate the values of OCV at the given SOC, using the polynomial SOCOCV */
   if (X[0] > 1.0) {
-    SOC = (((SOCOCV[0] + SOCOCV[1]) + SOCOCV[2]) + SOCOCV[3]) + SOCOCV[4];
+    OCV = (((SOCOCV[0] + SOCOCV[1]) + SOCOCV[2]) + SOCOCV[3]) + SOCOCV[4];
   }
-
-  /*  Terminal voltage estimation */
-  TerminalVoltage = ((SOC - Z[0] * U) - X[1]) - X[2];
-
-  /*  Calculate the Vt error */
-  *Error_x = Vt_Actual - TerminalVoltage;
 
   /*  --- EKF ALGORITHM --- */
   /*  --> SOC ESTIMATION */
   /*  Fk : State transition matrix */
-  A[0] = 1.0;
-  A[3] = 0.0;
-  A[6] = 0.0;
-  A[1] = 0.0;
-  A[4] = a1_tmp;
-  A[7] = 0.0;
-  A[2] = 0.0;
-  A[5] = 0.0;
-  A[8] = a2_tmp;
+  Fk[0] = 1.0;
+  Fk[2] = 0.0;
+  Fk[1] = 0.0;
+  Fk[3] = betha_xb;
 
   /*  Gk : Input control matrix */
-  /*  Prediction */
-  for (i = 0; i < 3; i++) {
-    i1 = (int)A[i];
-    d = A[i + 3];
-    d1 = A[i + 6];
-    for (A_tmp = 0; A_tmp < 3; A_tmp++) {
-      b_A[i + 3 * A_tmp] = ((double)i1 * P_x[3 * A_tmp] + d * P_x[3 * A_tmp + 1])
-        + d1 * P_x[3 * A_tmp + 2];
-    }
+  /* %% ---- PREDICTION ---- %%% */
+  KalmanGain_x[0] = X[0] + 0.0 * X[1];
+  KalmanGain_x[1] = 0.0 * X[0] + betha_xb * X[1];
+  X[0] = -(DeltaT / Qn_rated) * I2;
+  X[1] = Z[1] * (1.0 - betha_xb) * I2;
+
+  /*  U_k-1 */
+  for (i = 0; i < 2; i++) {
+    X[i] += KalmanGain_x[i];
+    d = Fk[i + 2];
+    I_tmp = (int)Fk[i];
+    b_Fk[i] = (double)I_tmp * P_x[0] + d * P_x[1];
+    b_Fk[i + 2] = (double)I_tmp * P_x[2] + d * P_x[3];
   }
 
-  for (i = 0; i < 3; i++) {
-    d = b_A[i];
-    d1 = b_A[i + 3];
-    d2 = b_A[i + 6];
-    for (i1 = 0; i1 < 3; i1++) {
-      A_tmp = i + 3 * i1;
-      P_x[A_tmp] = ((d * A[i1] + d1 * A[i1 + 3]) + d2 * A[i1 + 6]) + Q_x[A_tmp];
-    }
+  for (i = 0; i < 2; i++) {
+    d = b_Fk[i + 2];
+    d1 = b_Fk[i];
+    P_x[i] = (d1 + d * 0.0) + Q_x[i];
+    P_x[i + 2] = (d1 * 0.0 + d * betha_xb) + Q_x[i + 2];
   }
 
-  /*  Update */
-  SOC = 0.0;
-  for (i = 0; i < 3; i++) {
-    KalmanGain_x[i] = (P_x[i] * dOCV + -P_x[i + 3]) + -P_x[i + 6];
-    SOC += ((dOCV * P_x[3 * i] + -P_x[3 * i + 1]) + -P_x[3 * i + 2]) * C_x[i];
-  }
-
-  SOC = 1.0 / (SOC + R_x);
-  for (i = 0; i < 3; i++) {
-    KalmanGain_x[i] *= SOC;
-    c_A[i] = (A[i] * X[0] + A[i + 3] * X[1]) + A[i + 6] * X[2];
-  }
-
-  X[0] = -(DeltaT / Qn_rated) * U;
-  X[1] = Z[1] * (1.0 - a1_tmp) * U;
-  X[2] = Z[2] * (1.0 - a2_tmp) * U;
-  X[0] = (c_A[0] + X[0]) + KalmanGain_x[0] * *Error_x;
-  X[1] = (c_A[1] + X[1]) + KalmanGain_x[1] * *Error_x;
-  X[2] = (c_A[2] + X[2]) + KalmanGain_x[2] * *Error_x;
-
-  /* X(1) = min(1, X(1)); */
-  memset(&A[0], 0, 9U * sizeof(double));
-  A[0] = 1.0;
-  A[4] = 1.0;
-  A[8] = 1.0;
-  d = KalmanGain_x[0];
-  d1 = KalmanGain_x[1];
-  d2 = KalmanGain_x[2];
-  for (i = 0; i < 3; i++) {
-    SOC = C_x[i];
-    b_A[3 * i] = A[3 * i] - d * SOC;
-    A_tmp = 3 * i + 1;
-    b_A[A_tmp] = A[A_tmp] - d1 * SOC;
-    A_tmp = 3 * i + 2;
-    b_A[A_tmp] = A[A_tmp] - d2 * SOC;
-  }
-
-  for (i = 0; i < 3; i++) {
-    d = b_A[i];
-    d1 = b_A[i + 3];
-    d2 = b_A[i + 6];
-    for (i1 = 0; i1 < 3; i1++) {
-      A[i + 3 * i1] = (d * P_x[3 * i1] + d1 * P_x[3 * i1 + 1]) + d2 * P_x[3 * i1
-        + 2];
-    }
-  }
-
-  memcpy(&P_x[0], &A[0], 9U * sizeof(double));
-
-  /*  --> BATTERY PARAMETERS ESTIMATION */
-  /*  Prediction */
-  for (i = 0; i < 25; i++) {
+  for (i = 0; i < 9; i++) {
     P_z[i] += Q_z[i];
   }
 
-  /*  Update */
-  SOC = 0.0;
-  for (i = 0; i < 5; i++) {
-    d = 0.0;
-    for (i1 = 0; i1 < 5; i1++) {
-      d += C_z[i1] * P_z[i1 + 5 * i];
+  *alpha_x *= rho_x;
+  *betha_x *= rho_x;
+  *alpha_z *= rho_z;
+  *betha_z *= rho_z;
+
+  /* %% ---- UPDATE ---- %%% */
+  *alpha_x += 0.5;
+  betha_xb = *betha_x;
+  *alpha_z += 0.5;
+  betha_zb = *betha_z;
+
+  /*  Terminal voltage estimation */
+  TerminalVoltage = (OCV - Z[0] * b_I) - X[1];
+
+  /*  Calculate the Vt error */
+  Error_x = Vt_Actual - TerminalVoltage;
+  d = -P_x[3];
+  for (b_i = 0; b_i < 5; b_i++) {
+    /*  Measurement variances */
+    /*  State estimate and its covariance */
+    SOC = 1.0 / (((dOCV * P_x[0] + -P_x[1]) * dOCV + -(dOCV * P_x[2] + d)) +
+                 betha_xb / *alpha_x);
+    d1 = (P_x[0] * dOCV + -P_x[2]) * SOC;
+    KalmanGain_x[0] = d1;
+    Xb_idx_0 = X[0] + d1 * Error_x;
+    d1 = (P_x[1] * dOCV + d) * SOC;
+    Xb_idx_1 = X[1] + d1 * Error_x;
+    b_Fk[0] = 1.0 - KalmanGain_x[0] * dOCV;
+    b_Fk[1] = 0.0 - d1 * dOCV;
+    b_Fk[2] = 0.0 - (-KalmanGain_x[0]);
+    b_Fk[3] = 1.0 - (-d1);
+    for (i = 0; i < 2; i++) {
+      d1 = b_Fk[i + 2];
+      b_C_z = b_Fk[i];
+      Fk[i] = b_C_z * P_x[0] + d1 * P_x[1];
+      Fk[i + 2] = b_C_z * P_x[2] + d1 * P_x[3];
     }
 
-    SOC += d * C_z[i];
-  }
-
-  SOC = 1.0 / (SOC + R_z);
-  for (i = 0; i < 5; i++) {
-    d = 0.0;
-    for (i1 = 0; i1 < 5; i1++) {
-      d += P_z[i + 5 * i1] * C_z[i1];
+    /*  Battery parameters estimate and its covariance */
+    b_C_z = 0.0;
+    for (i = 0; i < 3; i++) {
+      KalmanGain_z[i] = (P_z[i] * C_z[0] + P_z[i + 3] * C_z[1]) + P_z[i + 6] *
+        C_z[2];
+      b_C_z += ((C_z[0] * P_z[3 * i] + C_z[1] * P_z[3 * i + 1]) + C_z[2] * P_z[3
+                * i + 2]) * C_z[i];
     }
 
-    d *= SOC;
-    KalmanGain_z[i] = d;
-    Z[i] += d * *Error_x;
-  }
-
-  for (i = 0; i < 25; i++) {
-    b_I[i] = 0;
-  }
-
-  for (A_tmp = 0; A_tmp < 5; A_tmp++) {
-    b_I[A_tmp + 5 * A_tmp] = 1;
-  }
-
-  for (i = 0; i < 5; i++) {
-    for (i1 = 0; i1 < 5; i1++) {
-      A_tmp = i1 + 5 * i;
-      d_I[A_tmp] = (double)b_I[A_tmp] - KalmanGain_z[i1] * C_z[i];
+    SOC = 1.0 / (b_C_z + betha_zb / *alpha_z);
+    d1 = KalmanGain_z[0] * SOC;
+    KalmanGain_z[0] = d1;
+    Zb_idx_0 = Z[0] + d1 * Error_x;
+    d1 = KalmanGain_z[1] * SOC;
+    KalmanGain_z[1] = d1;
+    Zb_idx_1 = Z[1] + d1 * Error_x;
+    d1 = KalmanGain_z[2] * SOC;
+    Zb_idx_2 = Z[2] + d1 * Error_x;
+    for (i = 0; i < 9; i++) {
+      c_I[i] = 0;
     }
-  }
 
-  for (i = 0; i < 5; i++) {
-    for (i1 = 0; i1 < 5; i1++) {
-      d = 0.0;
-      for (A_tmp = 0; A_tmp < 5; A_tmp++) {
-        d += d_I[i + 5 * A_tmp] * P_z[A_tmp + 5 * i1];
+    c_I[0] = 1;
+    c_I[4] = 1;
+    c_I[8] = 1;
+    b_C_z = KalmanGain_z[0];
+    SOC = KalmanGain_z[1];
+    for (i = 0; i < 3; i++) {
+      betha_xb = C_z[i];
+      d_I[3 * i] = (double)c_I[3 * i] - b_C_z * betha_xb;
+      I_tmp = 3 * i + 1;
+      d_I[I_tmp] = (double)c_I[I_tmp] - SOC * betha_xb;
+      I_tmp = 3 * i + 2;
+      d_I[I_tmp] = (double)c_I[I_tmp] - d1 * betha_xb;
+    }
+
+    for (i = 0; i < 3; i++) {
+      d1 = d_I[i];
+      b_C_z = d_I[i + 3];
+      SOC = d_I[i + 6];
+      for (I_tmp = 0; I_tmp < 3; I_tmp++) {
+        P_zb[i + 3 * I_tmp] = (d1 * P_z[3 * I_tmp] + b_C_z * P_z[3 * I_tmp + 1])
+          + SOC * P_z[3 * I_tmp + 2];
       }
-
-      c_I[i + 5 * i1] = d;
     }
+
+    /*  Parameters for the measurement noise variances estimation */
+    /*  Terminal voltage estimation */
+    /*  Calculate the Vt error */
+    SOC = Vt_Actual - ((OCV - Zb_idx_0 * b_I) - Xb_idx_1);
+    SOC = 0.5 * (SOC * SOC);
+    betha_xb = (*betha_x + SOC) + 0.5 * ((dOCV * Fk[0] + -Fk[1]) * dOCV + -(dOCV
+      * Fk[2] + -Fk[3]));
+    b_C_z = 0.0;
+    for (i = 0; i < 3; i++) {
+      b_C_z += ((C_z[0] * P_zb[3 * i] + C_z[1] * P_zb[3 * i + 1]) + C_z[2] *
+                P_zb[3 * i + 2]) * C_z[i];
+    }
+
+    betha_zb = (*betha_z + SOC) + 0.5 * b_C_z;
   }
 
-  memcpy(&P_z[0], &c_I[0], 25U * sizeof(double));
+  *betha_x = betha_xb;
+  *betha_z = betha_zb;
+  X[0] = Xb_idx_0;
+  X[1] = Xb_idx_1;
+  P_x[0] = Fk[0];
+  P_x[1] = Fk[1];
+  P_x[2] = Fk[2];
+  P_x[3] = Fk[3];
+  Z[0] = Zb_idx_0;
+  Z[1] = Zb_idx_1;
+  Z[2] = Zb_idx_2;
+  memcpy(&P_z[0], &P_zb[0], 9U * sizeof(double));
+  return TerminalVoltage;
 }
 
 /*
- * File trailer for extendedKalmanFilter.c
+ * File trailer for extendedKalmanFilter1RC.c
  *
  * [EOF]
  */
