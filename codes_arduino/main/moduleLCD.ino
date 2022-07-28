@@ -1,4 +1,4 @@
-void printLCD(int option, double voltage, int Vnb, int Inb, double current, double SOC, bool on, int mode, double temperature, int upPin, int downPin, int rightPin, int leftPin, int d ,int mo, int ye,  int h,  int mi,  int s) {
+void printLCD(int option, double voltage, int Vnb, int Inb, double current, double SOC, bool on, int mode, bool SDon, double temperature, int d ,int mo, int ye,  int h,  int mi,  int s) {
     lcd.clear();
     lcd.setCursor(0,0);
     
@@ -30,11 +30,10 @@ void printLCD(int option, double voltage, int Vnb, int Inb, double current, doub
         lcd.print(message);
     } else if(option == 4) {
         lcd.print("State :");
+        lcd.setCursor(0, 1);
         if(on) { 
-          lcd.setCursor(0, 1);
           lcd.print("ON"); 
         } else { 
-          lcd.setCursor(0, 1);
           lcd.print("OFF"); 
         }
     } else if(option == 5) {
@@ -48,7 +47,7 @@ void printLCD(int option, double voltage, int Vnb, int Inb, double current, doub
       lcd.print("Date :") ;  
       lcd.setCursor(0,1) ; 
       char message[25];  
-      sprintf(message, "%d-%d-%d", d, mo, ye) ;  
+      sprintf(message, "%d-%d-%d", d, mo, ye);  
       lcd.print(message);
       
     }
@@ -56,8 +55,17 @@ void printLCD(int option, double voltage, int Vnb, int Inb, double current, doub
       lcd.print("Heure :") ;  
       lcd.setCursor(0,1) ; 
       char message[15];  
-      sprintf(message, "%d:%d:%d", h, mi, s) ;  
+      sprintf(message, "%d:%d:%d", h, mi, s);  
       lcd.print(message);
+    }
+    else if (option == 8) {
+      lcd.print("SAVE ON SD CARD :");  
+      lcd.setCursor(0, 1);
+      if(SDon) { 
+          lcd.print("YESS"); 
+        } else { 
+          lcd.print("NO"); 
+        }
     }
 }
 
@@ -117,7 +125,7 @@ bool activateClick(int *option, int upPin, int downPin, int rightPin, int leftPi
 }
 
 
-void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *Inb, int nbBatteries, double *I, double *X, double *T, int upPin, int downPin, int rightPin, int leftPin, bool *stateUP, bool *stateDOWN, bool *stateRIGHT, bool *stateLEFT,int *d, int *mo, int *y, int *h, int *mi, int *s, int *count_push) {
+void updateLCD(int *affichage, bool *on, int *mode, bool *SDon, double *V, int *Vnb, int *Inb, int nbBatteries, double *I, double *X, double *T, bool *stateUP, bool *stateDOWN, bool *stateRIGHT, bool *stateLEFT,int *d, int *mo, int *y, int *h, int *mi, int *s, int *count_push) {
       bool BUTTON_UP = digitalRead(upPin);
       bool BUTTON_DOWN = digitalRead(downPin);
       bool BUTTON_RIGHT = digitalRead(rightPin);
@@ -126,7 +134,7 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
       if (BUTTON_UP != *stateUP) {
         Serial.println("---UP");
         *stateUP = BUTTON_UP;
-        if(*affichage < 7 && *count_push == 0) {
+        if(*affichage < 8 && *count_push == 0) {
           *affichage += 1;
         } else if(*affichage == 6) {
           if(*count_push == 1) {
@@ -151,7 +159,7 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
             if(*s < 0) { *s = 0; }
           }
         } 
-        printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin, *d, *mo, *y, *h, *mi, *s);
+        printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*2], *on, *mode, *SDon, T[*Vnb], *d, *mo, *y, *h, *mi, *s);
       }
       if (BUTTON_DOWN != *stateDOWN) {
         Serial.println("---DOWN");
@@ -180,7 +188,7 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
             if (*s > 60){ *s = 0; }
           }
         }
-        printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin, *d, *mo, *y, *h, *mi, *s);
+        printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*2], *on, *mode, *SDon, T[*Vnb], *d, *mo, *y, *h, *mi, *s);
       }
       if(BUTTON_RIGHT != *stateRIGHT) {
         Serial.println("---SELECT");
@@ -204,9 +212,15 @@ void updateLCD(int *affichage, bool *on, int *mode, double *V, int *Vnb, int *In
           }
         } else if(*affichage == 6 || *affichage == 7) {
           *count_push += 1;
-          if (*count_push == 4) { *count_push = 0; }
+            if (*count_push == 4) { 
+              *count_push = 0; 
+              rtc.setTime(hours, minutes, seconds);
+              rtc.setDate(day, month, year);
+            }
+        } else if(*affichage == 8) {
+          *SDon = !*SDon;
         }
-        printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*3], *on, *mode, T[*Vnb], upPin, downPin, rightPin, leftPin, *d, *mo, *y, *h, *mi, *s);
+        printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*2], *on, *mode, *SDon, T[*Vnb], *d, *mo, *y, *h, *mi, *s);
       }
       if(BUTTON_LEFT != *stateLEFT) {
         Serial.println("---RESET");
