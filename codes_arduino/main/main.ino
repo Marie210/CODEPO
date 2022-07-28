@@ -46,21 +46,26 @@ unsigned long lcdTime = 0.0;
 double updateLCDTime = 300;
 /* -- SD --*/
 File file;
-const char *filename = "/data.txt"; 
+const char *fileDataName = "/data.txt"; 
+const char *fileMemoryName = "/memory.txt"; 
+unsigned long SDTime = 0.0;
+double updateSDTime = 1 * 60 * 1000;
+bool SDon = false;
+bool SDavailable = false;
 /* -- MEASURES -- */
 const int nbBatteries = 6; // nombre de batteries => de 1 à 6 + 1 pour panneux solaires
 const int nbCurrent = 2;
-double I[nbCurrent] = {0.0, 0.0};
-double V[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-double T[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+double I[nbCurrent] = {};
+double V[nbBatteries] = {};
+double T[nbBatteries] = {};
 double IMean[nbCurrent] = {0.0, 0.0};
-double VMean[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-double TMean[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-double SMean[nbBatteries] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+double VMean[nbBatteries] = {};
+double TMean[nbBatteries] = {};
+double SMean[nbBatteries] = {};
+double PMean[nbBatteries] = {};
 double VSP = 0.0;
 double VSPMean = 0.0;
 double ISPMean = 0.0;
-double PMean = 0.0;
 double PSPMean = 0.0;
 int counterMean = 0;
 int Vnb = 0;
@@ -77,19 +82,23 @@ int numSamples = 100;
 double mvPerI_20 = 31.25;
 double offset_20 = 0.36;
 double mvPerI_100 = 6.25;
-double offset_100 = 0.71;
+double offset_100 = 1.15;
 /* -- FILTRE KALMANN-- */
-char input[] = "{'C1': 1.128555861058894e3, 'C2': 3.872412309575128e2, 'R0': 0.245610276594537, 'R1': 0.033871718690823, 'R2': 0.022658450007419, 'SOCOCV': [-5899.08970208633, 33676.8099461629, -83441.9838542838, 117439.916788238, -103158.271786075, 58466.9571460381, -21320.9039215880, 4810.53130689387, -602.846517986747, 26.7902085666153, 3.13908872646908, 5.40144738302999], 'dSOCOCV': [-64889.9867229497, 336768.099461629, -750977.854688554, 939519.334305904, -722107.902502523, 350801.742876229, -106604.519607940, 19242.1252275755, -1808.53955396024, 53.5804171332306, 3.13908872646908], 'SOC_init': 1.0, 'P_x': 5e-8, 'P_z': 5e-9, 'Q_x': 1e-10, 'Q_z': 1e-6, 'R_x': 0.1, 'R_z': 1, 'Qn_rated': 1.3, 'voltage_rated': 2, 'current_rated': 1.3}";
-double X[3*nbBatteries];
-double Z[5*nbBatteries];
+char input[] = "{'C1': 1.39e3, 'R0': 4.2e-3, 'R1': 2.8e-3, 'SOCOCV': [-8.05e-8, 1.64e-5, -1.03e-3, 0.034, 11.49], 'dSOCOCV': [-3.08e-7, 5.11e-5, 0.0023, 0.038], 'SOC_init': 1.0, 'P_x': [5e-8, 5e-8, 5e-8], 'P_z': [5e-9, 5e-9, 5e-9, 5e-9, 5e-9], 'Q_x': [1e-6, 1e-6, 1e-6], 'Q_z': [1e-6, 1e-6, 1e-6, 1e-6, 1e-6], 'alpha_x': 10, 'betha_x': 1e-3, 'alpha_z': 100, 'betha_z': 5e-4, 'Qn_rated': 200, 'voltage_rated': 12, 'current_rated': 1.3}";
+double X[2*nbBatteries];
+double Z[3*nbBatteries];
 double SOCOCV[5];
 double dSOCOCV[4];
-double P_x[9*nbBatteries];
-double P_z[25*nbBatteries];
-double Q_x[9*nbBatteries]; 
-double Q_z[25*nbBatteries];
-double R_x[nbBatteries]; 
-double R_z[nbBatteries];
+double P_x[4*nbBatteries];
+double P_z[9*nbBatteries];
+double Q_x[4*nbBatteries]; 
+double Q_z[9*nbBatteries];
+double alpha_x[nbBatteries]; 
+double betha_x[nbBatteries]; 
+double alpha_z[nbBatteries]; 
+double betha_z[nbBatteries]; 
+double rho_x = 1.0e-4;
+double rho_z = 1.0e-4;
 double DeltaT; 
 double Qn_rated;
 double voltage_rated;
@@ -115,11 +124,18 @@ RTCDue rtc(XTAL); // Select the Slowclock source
 int hours = 0, minutes = 0, seconds = 0; // heure - minute - seconde
 int day = 25, month = 7, year = 2022; // jour - mois - année
 int hourDay[5], minuteDay[5];
-double VH[5*nbBatteries], IH[5*nbBatteries], SH[5*nbBatteries];
-double listheure[5] = {0, 0, 0, 0, 0}; 
+int hourDaySP[9], minuteDaySP[9];
+double VH[5*nbBatteries] = {}, IH[5*nbBatteries] = {0}, SH[5*nbBatteries] = {0}, PH[5*nbBatteries] = {0};
+double PSPH[9] = {};
+//double listheureBat[5] = {22, 4, 8, 12, 16}; 
+//double listheureSP[9] = {8, 9, 10, 11, 12, 13, 14, 15, 16};
+double listheureBat[5] = {}; 
+double listheureSP[9] = {};
 double HTime = 0.0, updateHTime = 0.0;
+double normH = 0, normHSP = 0;
 bool checkH[5] = {false, false, false, false, false};
-int Hcounter = 0;
+bool checkSPH[9] = {false, false, false, false, false, false, false, false, false};
+int Hcounter = 0, HSPcounter = 0;
 int count_push = 0;
 /* -- DIVERS -- */
 int mode = 0, oldMode = 0; // default = 0
@@ -136,22 +152,25 @@ bool initClick = false;
 
 
 void setup() {
+  
   /*--- Initialisation des communications serial ---*/
   Serial.begin(115200);
   Serial1.begin(115200);                  
 
   /*--- Initialisation de la carte SD ---*/
-  //initializeSD();
+  if(initializeSD()) {
+    SDavailable = true;
+  }
 
   /*--- Initialisation LCD ---*/
-  
   lcd.init();
   lcd.clear();         
   lcd.backlight();
   lcd.setCursor(0,0);   
   lcd.print("Starting...");
   messageLCD2Lines("Activate click ?", "No");
-
+  
+  
   /*--- Initialisation des pins ---*/
   pinMode(relayPin, OUTPUT);
   pinMode(resetThingstreamPin, OUTPUT);
@@ -202,17 +221,16 @@ void loop() {
       }
   }
   else if(flag_init == 4) { // Initialisation des paramètres pour les filtres de Kalmann
-        initialisation(input, X, Z, SOCOCV, dSOCOCV, P_x, P_z, Q_x, Q_z, R_x, R_z, &Qn_rated, &voltage_rated, &current_rated); // Pour une batterie
-        duplicate(X, Z, P_x, P_z, Q_x, Q_z, R_x, R_z, nbBatteries); // Dupliquer pour toutes les batteries
+        ReadSD(input, fileMemoryName);
+        initialisation(input, X, Z, SOCOCV, dSOCOCV, P_x, P_z, Q_x, Q_z, alpha_x, betha_x, alpha_z, betha_z, &Qn_rated, &voltage_rated, &current_rated); // Pour une batterie
+        duplicate(X, Z, P_x, P_z, Q_x, Q_z, alpha_x, betha_x, alpha_z, betha_z, nbBatteries);
         flag_init = 5;
   } 
   else if(flag_init == 5) {
       if(mode == 0 && on) {
         /* --- Measure VOLTAGE + CURRENT + TEMP ---*/
-        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, &PMean, &PSPMean, VMean, IMean, TMean, &VSPMean, &counterMean, X, SMean);
-        
+        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, PMean, &PSPMean, VMean, IMean, TMean, &VSPMean, &counterMean, X, SMean);
         /* --- AFFICHAGE ---*/
-        //sec = millis()*0.001;
     
         DeltaT = (double)(millis()*0.001 - kalmanTime);
         kalmanTime = (double)(millis()*0.001);
@@ -220,7 +238,7 @@ void loop() {
         //kalmanTime = (double)(millis());
         //DeltaT = 0.5;
         
-        //Serial.print("---- DeltaT = "); Serial.println(DeltaT);
+        Serial.print("---- DeltaT = "); Serial.println(DeltaT);
         
         /* --- COULOMB Counting ---*/
         for(int i = 0; i < nbBatteries; i++) {
@@ -231,14 +249,17 @@ void loop() {
         double time1 = micros();
         double time2 = micros();
         for(int i = 0; i < 1; i++) { // Kalmann filter applied on each 
-           extendedKalmanFilter(I[0], X + 3*i, Z + 5*i, SOCOCV, dSOCOCV, V[i], P_x + 9*i, P_z + 25*i, Q_x + 9*i, Q_z + 25*i, R_x[i], R_z[i], DeltaT, Qn_rated, &error);
-           //Serial.print("------- Kalman "); Serial.print(i); Serial.print(" => "); Serial.print(micros() - time2); Serial.println(" us.");
-           //Serial.print("SOC = "); Serial.println(X[3*i]);
-           
+           extendedKalmanFilter(I[0], I[0], X + 2*i, Z + 3*i, SOCOCV, dSOCOCV, V[i], P_x + 4*i, P_z + 9*i, Q_x + 4*i, Q_z + 9*i, &betha_x[i], &betha_z[i], &alpha_x[i], &alpha_z[i], rho_x, rho_z, DeltaT, Qn_rated);
+           Serial.print("------- Kalman "); Serial.print(i); Serial.print(" => "); Serial.print(micros() - time2); Serial.println(" us.");
+           Serial.print("SOC = "); Serial.println(X[2*i]);
            time2 = micros();
         }
         double computationTimeMS = micros() - time1;
         //Serial.print("Total computation time : "); Serial.print(computationTimeMS); Serial.println(" us.");
+
+        if(SDon && SDavailable) {
+          printSd(fileDataName, nbBatteries, V, I, T, X, VSP, rtc.getHours(), rtc.getMinutes(), rtc.getSeconds(), rtc.getDay(), rtc.getMonth(), rtc.getYear());
+        }
       
     } else if(mode == 1 && on) {
 
@@ -247,7 +268,9 @@ void loop() {
         T[0] = mesureTemperature(TPin, VccPin, RT, RVcc1, RVcc2);
         
         /* ---- save data to SD card ---- */
-        printSd(V[0], I[0], sec, T[0]);
+        if(SDon && SDavailable) {
+          printSd(fileDataName, nbBatteries, V, I, T, X, VSP, rtc.getHours(), rtc.getMinutes(), rtc.getSeconds(), rtc.getDay(), rtc.getMonth(), rtc.getYear());
+        }
         
         sec = millis()*0.001;
         if(sec-previous_millis > HPPC_time) {
@@ -263,48 +286,32 @@ void loop() {
         }
     } else if(mode == 2 && on) {
         /* ---- MEASURES => ALIMENTATION - VOLTAGE - CURRENT - TEMPERATURE - TIME ---- */
-        /*
-        V[0] = measureVoltage(RV, pot[0], numSamples, VPin);
-        I[0] = measureCurrent(numSamples, offset_20, mvPerI_20, pinI, VccIPin);
-        T[0] = mesureTemperature(TPin, VccPin, RT, RVcc1, RVcc2);
-        */
-        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, &PMean, &PSPMean, VMean, IMean, TMean, &VSPMean, &counterMean, X, SMean);
-        sec = millis()*0.001;
+        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, PMean, &PSPMean, VMean, IMean, TMean, &VSPMean, &counterMean, X, SMean);
         /* ---- save data to SD card ---- */
-        printSd(V[0], I[1], sec, T[0]);
+        if(SDon && SDavailable) {
+          printSd(fileDataName, nbBatteries, V, I, T, X, VSP, rtc.getHours(), rtc.getMinutes(), rtc.getSeconds(), rtc.getDay(), rtc.getMonth(), rtc.getYear());
+        }
     }
 
     if(millis() - buttonTime > updateButtonTime) {
       buttonTime = millis();
-      updateLCD(&affichage, &on, &mode, V, &Vnb, &Inb, nbBatteries, I, X, T, upPin, downPin, rightPin, leftPin, &stateUP, &test, &stateRIGHT, &stateLEFT, &day, &month, &year, &hours, &minutes, &seconds, &count_push);    }
+      updateLCD(&affichage, &on, &mode, &SDon, V, &Vnb, &Inb, nbBatteries, I, X, T, &stateUP, &test, &stateRIGHT, &stateLEFT, &day, &month, &year, &hours, &minutes, &seconds, &count_push);    
+    }
 
     if(millis() - lcdTime > updateLCDTime) {
       lcdTime = millis();
-      printLCD(affichage, V[Vnb], Vnb, Inb, I[Inb], X[(Vnb)*3], on, mode, T[Vnb], upPin, downPin, rightPin, leftPin, day, month, year, hours, minutes, seconds);
+      printLCD(affichage, V[Vnb], Vnb, Inb, I[Inb], X[(Vnb)*3], on, mode, SDon, T[Vnb], day, month, year, hours, minutes, seconds);
     }
 
-    
-    if(millis() - HTime > updateHTime) {
-      if(rtc.getHours() == listheure[Hcounter] && checkH[Hcounter] == false) {
-        checkH[Hcounter] = true;
-        hourDay[Hcounter] = rtc.getHours();
-        minuteDay[Hcounter] = rtc.getMinutes();
-        for(int i = 0; i < nbBatteries; i++) {
-          VH[5*i + Hcounter] = V[i];
-          IH[5*i + Hcounter] = I[0];
-          SH[5*i + Hcounter] = X[3*i];
-        }
-        Hcounter += 1;
-        if(Hcounter == 5) {
-          day = rtc.getDay();
-          month = rtc.getMonth();
-          year = rtc.getYear();
-          publish(nbBatteries, VH, IH, SH, hourDay, minuteDay, day, month, year, VMean, IMean, SMean, TMean, VSPMean, PMean, PSPMean);
-        }
-      }
+    if(millis() - SDTime > updateSDTime && SDavailable) {
+      SDTime = millis();
+      saveSD(fileMemoryName, X, Z, P_x, P_z, Q_x, Q_z, alpha_x, betha_x, alpha_z, betha_z, SOCOCV, dSOCOCV, Qn_rated, voltage_rated, current_rated);
     }
     
-
+    if(millis() - HTime > updateHTime && !initClick) {
+      updateMeasures(rtc.getHours(), nbBatteries, &Hcounter, &HSPcounter, &normH, &normHSP, listheureBat, listheureSP, VMean, IMean, SMean, TMean, PMean, &VSPMean, &PSPMean, &counterMean, V, I, X, VSP, VH, IH, SH, PH, PSPH, hourDaySP, minuteDaySP, hourDay, minuteDay, &day, &month, &year);
+    }
+    
     if(oldMode != mode) {
       digitalWrite(relayPin,HIGH);
       oldMode = mode;
@@ -317,7 +324,7 @@ void loop() {
   
    String receivedMessage;
    if(readCommand(&receivedMessage)) {
-      convertMessage(receivedMessage, &on, &mode, X, Z, SOCOCV, dSOCOCV, P_x, P_z, Q_x, Q_z, R_x, R_z, &Qn_rated, &current_rated, &voltage_rated);
-      duplicate(X, Z, P_x, P_z, Q_x, Q_z, R_x, R_z, nbBatteries);
+      convertMessage(receivedMessage, &on, &mode, X, Z, SOCOCV, dSOCOCV, P_x, P_z, Q_x, Q_z, alpha_x, betha_x, alpha_z, betha_z, &Qn_rated, &current_rated, &voltage_rated);
+      duplicate(X, Z, P_x, P_z, Q_x, Q_z, alpha_x, betha_x, alpha_z, betha_z, nbBatteries);
    }
 }
