@@ -13,9 +13,21 @@ from bs4 import BeautifulSoup
 import matplotlib.pyplot as plt
 
 
-def Calcul_puissance_moyenne():
+def calcul_puissance_theorique( ):
+    '''
+    Calcul  la puissance théorique en sortie des panneaux solaires à l'aide de l'irradiance journalière 
+    sur la ville de Kinshasa . 
+    Le modèle du panneaux solaire se retrouve dans la base de données CECmod (base de donnée de la comission à 
+    l'énergie Californienne reprenant énormement de modèle de panneaux photovoltaique différent). 
+
+    Returns
+    -------
+    dc_power: liste float 
+        liste des puissance théoriques fournies par les panneaux solaire entre 8h et 16h.
+
+    '''
     # Irradiance data 
-    print("ok\n")
+  
     url = "https://fr.tutiempo.net/radiation-solaire/kinshasa.html"
     page = requests.get(url)
     soup = BeautifulSoup(page.content, 'html.parser')
@@ -51,7 +63,7 @@ def Calcul_puissance_moyenne():
     
     # Definition of PV module characteristics:
     cec_mod_db = pvsystem.retrieve_sam('CECmod')
-    print(cec_mod_db.iloc[2,8458])
+    
     pdc0 = float(cec_mod_db.iloc[2,8458]) # STC power
     gamma_pdc = float(cec_mod_db.iloc[21,8458])/100 # The temperature coefficient in units of 1/C
     #gamma_pdc= -0.0045
@@ -61,8 +73,10 @@ def Calcul_puissance_moyenne():
     Temp_a = np.array(Temp)
     
     dc_power = pvlib.pvsystem.pvwatts_dc(Irradiance_a, Temp_a, pdc0, gamma_pdc, temp_ref=25.0)
+    
     for i in range(len(dc_power)):
-        dc_power[i] = dc_power[i ]* 4 
+        dc_power[i] = dc_power[i ]* 20 
+    
     # Let's visualize the DC power output as function of the effective irradiance
     Heures = [8,9,10,11,12,13,14,15,16]
     plt.scatter(Heures, dc_power, c=Temp, vmin=10, vmax=50, cmap='Reds')
@@ -77,5 +91,5 @@ def Calcul_puissance_moyenne():
     plt.xlabel('Heures de la journée [H]')
     plt.ylabel('Puissance en courant continue  [W]')
     plt.show()
-    return puissance_moyenne
-
+    return dc_power.tolist()
+    
