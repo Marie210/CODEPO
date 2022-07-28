@@ -132,7 +132,7 @@ int analyse (String st) {
 }
 
 
-void publish(int nbBatteries, double *VH, double *IH, double *SH, int *hourDay, int *minuteDay, int day, int month, int year, double *VMean, double *IMean, double *SMean, double *TMean, double VSPMean, double PMean, double PSPMean){
+void publish(int nbBatteries, double *VH, double *IH, double *SH, double *PH, double *PSPH, int *hourDay, int *minuteDay, int *hourDaySP, int *minuteDaySP, int day, int month, int year, double *VMean, double *IMean, double *SMean, double *TMean, double VSPMean, double *PMean, double PSPMean){
 
     char message[10000] = "\0";
     char res[500];
@@ -140,38 +140,35 @@ void publish(int nbBatteries, double *VH, double *IH, double *SH, int *hourDay, 
     strcat(message, res);
     for(int i = 0; i < nbBatteries; i++) {
       int n = i*nbBatteries;
-      sprintf(res, "{'id':%d, 'S':[%0.1f, %0.1f, %0.1f, %0.1f, %0.1f, %0.1f],", i, SH[n+0], SH[n+1], SH[n+2], SH[n+3], SH[n+4], SMean[i]);
+      sprintf(res, "{'id':%d, 'S':[%0.2e, %0.2e, %0.2e, %0.2e, %0.2e, %0.2e],", i, SH[n+0], SH[n+1], SH[n+2], SH[n+3], SH[n+4], SMean[i]);
       strcat(message, res);
-      sprintf(res, "'V':[%0.1f, %0.1f, %0.1f, %0.1f, %0.1f, %0.1f],", VH[0], VH[1], VH[2], VH[3], VH[4], VMean[i]);
+      sprintf(res, "'V':[%0.2e, %0.2e, %0.2e, %0.2e, %0.2e, %0.2e],", VH[0], VH[1], VH[2], VH[3], VH[4], VMean[i]);
       strcat(message, res);
-      sprintf(res, "'I':[%0.1f, %0.1f, %0.1f, %0.1f, %0.1f, %0.1f]", IH[0], IH[1], IH[2], IH[3], IH[4], IH[5], IMean[0]);
+      sprintf(res, "'I':[%0.2e, %0.2e, %0.2e, %0.2e, %0.2e, %0.2e],", IH[0], IH[1], IH[2], IH[3], IH[4], IH[5], IMean[0]);
+      strcat(message, res);
+      sprintf(res, "'P':[%0.2e, %0.2e, %0.2e, %0.2e, %0.2e, %0.2e]", PH[0], PH[1], PH[2], PH[3], PH[4], PH[5], PMean[i]);
       strcat(message, res);
       if(i == 0) {
-        sprintf(res, ",'H':['%d:%d', '%d:%d', '%d:%d', '%d:%d', '%d:%d'], 'T':%0.1f, 'P':%0.1f, 'D': '%d-%d-%d'},", hourDay[0], minuteDay[0], hourDay[1], minuteDay[1], hourDay[2], minuteDay[2], hourDay[3], minuteDay[3], hourDay[4], minuteDay[4], TMean[i], PMean, day, month, year);
+        sprintf(res, ",'H':['%d:%d', '%d:%d', '%d:%d', '%d:%d', '%d:%d'], 'T':%0.2e, 'D': '%d-%d-%d'},", hourDay[0], minuteDay[0], hourDay[1], minuteDay[1], hourDay[2], minuteDay[2], hourDay[3], minuteDay[3], hourDay[4], minuteDay[4], TMean[i], day, month, year);
       } else if(i == nbBatteries-1) {
-        sprintf(res, ",'T':%0.1f, 'P':%0.1f}",TMean[i], PMean);
+        sprintf(res, ",'T':%0.2e, }", TMean[i]);
       }
       else {
-        sprintf(res, ",'T':%0.1f, 'P':%0.1f},",TMean[i], PMean);
+        sprintf(res, ",'T':%0.2e},", TMean[i]);
       }
       strcat(message, res);
     }
-    sprintf(res, "], 'solarPannels': [{'D': '%d-%d-%d', 'I': %0.1f, 'V': %0.1f, 'P': %0.1f}]}\"", day, month, year, IMean[1], VSPMean, PSPMean);
+    sprintf(res, "], 'solarPannels': [{'D': '%d-%d-%d', 'I': %0.2e, 'V': %0.2e, 'P': [%0.2e, %0.2e, %0.2e, %0.2e, %0.2e, %0.2e, %0.2e, %0.2e, %0.2e], 'H':['%d:%d', '%d:%d', '%d:%d', '%d:%d', '%d:%d', '%d:%d', '%d:%d', '%d:%d', '%d:%d']}]}\"", day, month, year, IMean[1], VSPMean, PSPH[0], PSPH[1], PSPH[2], PSPH[3], PSPH[4], PSPH[5], PSPH[6], PSPH[7], PSPH[8], hourDay[0], minuteDay[0], hourDay[1], minuteDay[1], hourDay[2], minuteDay[2], hourDay[3], minuteDay[3], hourDay[4], minuteDay[4], hourDay[5], minuteDay[5], hourDay[6], minuteDay[6], hourDay[7], minuteDay[7], hourDay[8], minuteDay[8]);
     strcat(message, res);
     Serial.println("message :");
     Serial.println(message);
 
-    Serial1.println(message);
-    if(checkReception() == 1) { 
-       messageLCD("publish : success");
-    } else {
-      messageLCD("publish : fail");
-    }
+    //Serial1.println(message);
 }
 
-void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5], 
-              double SOCOCV[5], double dSOCOCV[4], double P_x[9], double P_z[25], double Q_x[9],
-              double Q_z[25], double *R_x, double *R_z, double *Qn_rated, double *current_rated, double *voltage_rated) {
+void convertMessage(String input, bool *on, int *mode, double *X, double *Z, 
+              double *SOCOCV, double *dSOCOCV, double *P_x, double *P_z, double *Q_x,
+              double *Q_z, double *alpha_x, double *betha_x, double *alpha_z, double *betha_z, double *Qn_rated, double *current_rated, double *voltage_rated) {
 
   // Allocate a temporary JsonDocument
   // Don't forget to change the capacity to match your requirements.
@@ -201,8 +198,10 @@ void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5],
     }
   } else if(option == "D") {
       X[0] = doc["SOC_init"];
-      *R_x = doc["R_x"];
-      *R_z = doc["R_z"];
+      alpha_x[0] = doc["alpha_x"];
+      betha_x[0] = doc["betha_x"];
+      alpha_z[0] = doc["alpha_z"];
+      betha_z[0] = doc["betha_z"];
       *Qn_rated = doc["Qn_rated"]; *Qn_rated = *Qn_rated * 3600.0;
       *voltage_rated = doc["voltage_rated"];
       *current_rated = doc["current_rated"];
@@ -219,7 +218,7 @@ void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5],
         }
       }
     
-      for (int i = 0; i < 9; i++) {
+      for (int i = 0; i < 4; i++) {
         if(i%8 == 0) {
           P_x[i] = doc["P_x"];
           Q_x[i] = doc["Q_x"];
@@ -229,7 +228,7 @@ void convertMessage(String input, bool *on, int *mode, double X[3], double Z[5],
         }
       }
     
-      for (int i = 0; i < 25; i++) {
+      for (int i = 0; i < 9; i++) {
         if(i%6 == 0) {
           P_z[i] = doc["P_z"];
           Q_z[i] = doc["Q_z"];
