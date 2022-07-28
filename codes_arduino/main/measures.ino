@@ -95,15 +95,99 @@ void takeMeasures(double *V, double *I, double *T, double *VSP, int nbBatteries,
     }
     VMean[i] += V[i];
     TMean[i] += T[i];
-    SMean[i] += X[3*i];
+    SMean[i] += X[2*i];
+    PMean[i] += V[i]*I[0];
   }
   *VSP = measureVoltage(RSP1, RSP2, numSamples, VSPPin);
   *VSPMean += *VSP;
-  *PMean += V[0]*I[0];
   *PSPMean += (*VSP)*I[1];
   *counterMean += 1;
 }
 
+void updateMeasures(int timeHour, int nbBatteries, int *Hcounter, int *HSPcounter, double *normH, double *normHSP, double *listheureBat, double *listheureSP, double *VMean, double *IMean, double *SMean, double *TMean, double *PMean, double *VSPMean, double *PSPMean, int *counterMean, double *V, double *I, double *X, double VSP, double *VH, double *IH, double *SH, double *PH, double *PSPH, int *hourDaySP, int *minuteDaySP, int *hourDay, int *minuteDay, int *day, int *month, int *year) {
+  if(timeHour == listheureBat[*Hcounter] && checkH[*Hcounter] == false) {
+    checkH[*Hcounter] = true;
+    hourDay[*Hcounter] = rtc.getHours();
+    minuteDay[*Hcounter] = rtc.getMinutes();
+    if(*normH == 0) { *normH = 1; }
+    for(int i = 0; i < nbBatteries; i++) {
+      VH[5*i + *Hcounter] = VH[5*i + *Hcounter]/ *normH;
+      IH[5*i + *Hcounter] = IH[5*i + *Hcounter]/ *normH;
+      SH[5*i + *Hcounter] = SH[5*i + *Hcounter]/ *normH;
+      PH[5*i + *Hcounter] = PH[5*i + *Hcounter]/ *normH;
+    }
+    *normH = 0;
+    if(*Hcounter < 4) {
+      *Hcounter += 1;
+    }
+  }
+  if(timeHour == listheureSP[*HSPcounter] && checkSPH[*HSPcounter] == false) {
+    checkSPH[*HSPcounter] = true;
+    hourDaySP[*HSPcounter] = rtc.getHours();
+    minuteDaySP[*HSPcounter] = rtc.getMinutes();
+    if(*normHSP == 0) { *normHSP = 1; }
+    PSPH[*HSPcounter] = PSPH[*HSPcounter]/ *normHSP;
+    *normHSP = 0;
+    if(*HSPcounter < 8) {
+      *HSPcounter += 1;
+    }
+  }
+  if(*Hcounter == 4 && *HSPcounter == 8) {
+    sendMeasures(day, month, year, VMean, IMean, SMean, TMean, PMean, *VSPMean, *PSPMean, nbBatteries, VH, IH, SH, hourDay, minuteDay);
+    reInitialiseMeasures(VH, IH, SH, PH, PSPH, VSPMean, PSPMean, Hcounter, HSPcounter, counterMean, nbBatteries);
+  }
+  if(timeHour >= listheureBat[*Hcounter] && timeHour < listheureBat[*Hcounter] + 1) {
+    for(int i = 0; i < nbBatteries; i++) {
+      VH[5*i + *Hcounter] += V[i];
+      IH[5*i + *Hcounter] += I[0];
+      SH[5*i + *Hcounter] += X[2*i];
+      PH[5*i + *Hcounter] += V[i]*I[0];
+      *normH += 1;
+    }
+  }
+  if(timeHour >= listheureSP[*HSPcounter] && timeHour < listheureSP[*HSPcounter] + 1) {
+    PSPH[*HSPcounter] += VSP*I[1];
+    *normHSP += 1;
+  }
+}
+
+void reInitialiseMeasures(double *VH, double *IH, double *SH, double *PH, double *PSPH, double *VSPMean, double *PSPMean, int *Hcounter, int *HSPcounter, int *counterMean, int nbBatteries) {
+  for(int i = 0; i < *Hcounter * nbBatteries; i++) {
+    VH[i] = 0;
+    IH[i] = 0;
+    SH[i] = 0;
+    PH[i] = 0;
+    if(i < nbBatteries) {
+      VMean[i] = 0;
+      IMean[i] = 0;
+      SMean[i] = 0;
+      TMean[i] = 0;
+      PMean[i] = 0;
+    }
+    if(i < *HSPcounter) {
+      PSPH[i] = 0;
+    }
+    *VSPMean = 0;
+    *PSPMean = 0;
+    *Hcounter = 0;
+    *HSPcounter = 0;
+  }
+  *counterMean = 0;
+}
+
+void sendMeasures(int *day, int *month, int *year, double *VMean, double *IMean, double *SMean, double *TMean, double *PMean, double VSPMean, double PSPMean, int nbBatteries, double *VH, double *IH, double *SH, int *hourDay, int *minuteDay) {
+  *day = rtc.getDay();
+  *month = rtc.getMonth();
+  *year = rtc.getYear();
+  for(int i = 0; i < nbBatteries; i++) {
+    VMean[i] /= (double)counterMean;
+    IMean[i] /= (double)counterMean;
+    SMean[i] /= (double)counterMean;
+    TMean[i] /= (double)counterMean;
+    PMean[i] /= (double)counterMean;
+  }
+  publish(nbBatteries, VH, IH, SH, PH, PSPH, hourDay, minuteDay, hourDaySP, minuteDaySP, *day, *month, *year, VMean, IMean, SMean, TMean, VSPMean/counterMean, PMean, PSPMean/counterMean);
+}
 
 uint32_t ticks_diff(uint32_t t0, uint32_t t1) {
   return ((t0 < t1) ? 84000 + t0 : t0) - t1;
