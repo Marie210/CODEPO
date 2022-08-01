@@ -6,16 +6,16 @@ void printLCD(int option, double voltage, int Vnb, int Inb, double current, doub
         lcd.print("Voltage :");
         lcd.setCursor(0, 1);
         char message[15];
-        sprintf(message, "BAT%d : %f",Vnb, voltage);
+        sprintf(message, "BAT%d : %0.2f",Vnb, voltage);
         lcd.print(message);
     } else if(option == 1) {
         lcd.print("Current :");
         lcd.setCursor(0, 1);
         char message[16];
         if(Inb == 0) {
-          sprintf(message, "BAT : %f", current);
+          sprintf(message, "BAT : %0.2f", current);
         } else {
-          sprintf(message, "SP : %f", current);
+          sprintf(message, "SP : %0.2f", current);
         }
         lcd.print(message);
     } else if(option == 2) {
@@ -26,7 +26,7 @@ void printLCD(int option, double voltage, int Vnb, int Inb, double current, doub
         lcd.print("SOC :");
         lcd.setCursor(0, 1);
         char message[15];
-        sprintf(message, "BAT%d : %f",Vnb, SOC);
+        sprintf(message, "BAT%d : %0.2f",Vnb, SOC);
         lcd.print(message);
     } else if(option == 4) {
         lcd.print("State :");
@@ -40,7 +40,7 @@ void printLCD(int option, double voltage, int Vnb, int Inb, double current, doub
         lcd.print("Temperature :");
         lcd.setCursor(0, 1);
         char message[15];
-        sprintf(message, "BAT%d : %f",Vnb, temperature);
+        sprintf(message, "BAT%d : %0.2f",Vnb, temperature);
         lcd.print(message);
     }
     else if (option == 6){
@@ -159,7 +159,6 @@ void updateLCD(int *affichage, bool *on, int *mode, bool *SDon, double *V, int *
             if(*s < 0) { *s = 0; }
           }
         } 
-        printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*2], *on, *mode, *SDon, T[*Vnb], *d, *mo, *y, *h, *mi, *s);
       }
       if (BUTTON_DOWN != *stateDOWN) {
         Serial.println("---DOWN");
@@ -229,4 +228,5 @@ void updateLCD(int *affichage, bool *on, int *mode, bool *SDon, double *V, int *
         delay(500);
         REQUEST_EXTERNAL_RESET;
       }
+      printLCD(*affichage, V[*Vnb], *Vnb, *Inb, I[*Inb], X[(*Vnb)*2], *on, *mode, *SDon, T[*Vnb], *d, *mo, *y, *h, *mi, *s);
 }
