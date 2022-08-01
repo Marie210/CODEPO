@@ -1,35 +1,34 @@
-double measureVoltage(double R1, double R2, int numSamples, const byte VPin) {
-  
+double measureVoltage(double R1, double R2, int nbSamples, const byte VPin) {
   double sumVolt = 0.0;
   double Vref = 3.3; // tension de reference de l'arduino
   int counter = 0;
   double currentTime = 0.0;
   double V = 0.0;
-  //Get numSamples sumCur  
-  while(counter < numSamples) {
+  //Get nbSamples sumCur  
+  while(counter < nbSamples) {
     if(micros() >= currentTime + 200) {
       sumVolt = sumVolt + analogRead(VPin);  // Add sumVolt together
       currentTime = micros();
       counter = counter + 1;
     }
   }
-  sumVolt = sumVolt / numSamples; //Taking Average of sumCur
+  sumVolt = sumVolt / nbSamples; //Taking Average of sumCur
   V = (sumVolt * (Vref / 1023.0)) * ((R2+R1)/R2);
   if(V < 0.3 && V > -0.3) {
     V = 0.0;
-  }  
+  }
   return V;
 }
 
 
-double measureCurrent(int numSamples, double offset, double mvPerI, int pinCurrent, int pinVcc) {
+double measureCurrent(int nbSamples, double offset, double mvPerI, int pinCurrent, int pinVcc) {
   double sumCur = 0.0;
   double Vref = 3300; // tension de reference de l'arduino
   int counter = 0;
   double currentTime = 0.0;
   double I = 0.0;
-  //Get numSamples sumCur  
-  while(counter < numSamples) {
+  //Get nbSamples sumCur  
+  while(counter < nbSamples) {
     if(micros() >= currentTime + 200) {
       int meas = analogRead(pinCurrent)-analogRead(pinVcc);
       sumCur = sumCur + meas;  // Add sumCur together
@@ -37,7 +36,7 @@ double measureCurrent(int numSamples, double offset, double mvPerI, int pinCurre
       counter = counter + 1;
     }
   }
-  sumCur = sumCur / numSamples; //Taking Average of sumCur
+  sumCur = sumCur / nbSamples; //Taking Average of sumCur
   I = (sumCur * (Vref / 1023.0)) / mvPerI - offset;
   // Application d'un treshold sur le courant
   if(I < 0.3 && I > -0.3) {
@@ -48,15 +47,15 @@ double measureCurrent(int numSamples, double offset, double mvPerI, int pinCurre
 
 
 // Fonction qui mesure et affiche la température mesuré par le capteur, attention le capteur à les bornes positifs et négatifs inversés et il faut le connecter à du 3.3V
-double mesureTemperature(const byte TPin, const byte VccPin, double R, double RVcc1, double RVcc2) {
+double mesureTemperature(const byte TPin, const byte VccPin, double R, double RT1, double RT2, double *TH) {
 
-  double A = 0.000623, B = 0.000349, C = -0.0000005648; // Les coefficients de Steinhart-Hart obtenus expérimentalement pour notre thermistance
+  double A = TH[0], B = TH[1], C = TH[2]; // Les coefficients de Steinhart-Hart obtenus expérimentalement pour notre thermistance
   double logR_th, T;
   double Vin = 3.3;
   double pas = Vin / 1023; // L'arduino pour ces mesures découpe 3.3V en 1023 valeurs discrètes
   
   int mesure_tension = analogRead(TPin);  // Lis la tension en un format digital compris entre 0 et 1023 (découpe 3.3V en 1024 parts égales)
-  double Vcc = analogRead(VccPin) * (Vin / 1023.0) * ((RVcc1+RVcc2)/RVcc2);
+  double Vcc = analogRead(VccPin) * pas * ((RT1+RT2)/RT2);
   double tension = mesure_tension * pas; // Pour obtenir la tension sous format analogique il faut la multiplier par le pas
   
   // Calcul de la résistance
@@ -69,7 +68,6 @@ double mesureTemperature(const byte TPin, const byte VccPin, double R, double RV
     T = (1.0 / (A + B*logR_th + C*logR_th*logR_th*logR_th)); // Formule de Steinhart-Hart liant la résistance mesuré à la température (en Kelvin)
     T = T - 273.15; // Conversion Kelvin -> Celsius
   }
-  
   return T;
 }
 
@@ -80,16 +78,16 @@ double readAnalogMux(int channel, int PIN_ADDR_A, int PIN_ADDR_B, int PIN_ADDR_C
   digitalWrite(PIN_ADDR_C, bitRead(channel, 2));
 }
 
-void takeMeasures(double *V, double *I, double *T, double *VSP, int nbBatteries, int nbCurrent, double RV, double *pot, int numSamples, double R, double RVcc1, double RVcc2, double RSP1, double RSP2, double offset_20, double offset_100, double mvPerI_20, double mvPerI_100, double *PMean, double *PSPMean, double *VMean, double *IMean, double *TMean, double *VSPMean, int *counterMean, double *X, double *SMean) {
+void takeMeasures(double *V, double *I, double *T, double *VSP, int nbBatteries, int nbCurrent, double RV, double *pot, int nbSamples, double R, double RT1, double RT2, double RSP1, double RSP2, double offset_20, double offset_100, double mvPerI_20, double mvPerI_100, double *PMean, double *PSPMean, double *VMean, double *IMean, double *TMean, double *VSPMean, int *counterMean, double *X, double *SMean, double *TH) {
   for(int i = 0; i < nbBatteries; i++){
     readAnalogMux(i, PIN_ADDR_A, PIN_ADDR_B, PIN_ADDR_C);
-    V[i] = measureVoltage(RV, pot[i], numSamples, VPin);
-    T[i] = mesureTemperature(TPin, VccPin, R, RVcc1, RVcc2);
+    V[i] = measureVoltage(RV, pot[i], nbSamples, VPin);
+    T[i] = mesureTemperature(TPin, VccPin, R, RT1, RT2, TH+3*i);
     if(i < nbCurrent) {
       if(i == 0) {
-        I[i] = measureCurrent(numSamples, offset_20, mvPerI_20, pinI, VccIPin);
+        I[i] = measureCurrent(nbSamples, offset_20, mvPerI_20, pinI, VccIPin);
       } else {
-        I[i] = measureCurrent(numSamples, offset_100, mvPerI_100, pinISP, VccIPinSP);
+        I[i] = measureCurrent(nbSamples, offset_100, mvPerI_100, pinISP, VccIPinSP);
       }
       IMean[i] += I[i];
     }
@@ -98,7 +96,7 @@ void takeMeasures(double *V, double *I, double *T, double *VSP, int nbBatteries,
     SMean[i] += X[2*i];
     PMean[i] += V[i]*I[0];
   }
-  *VSP = measureVoltage(RSP1, RSP2, numSamples, VSPPin);
+  *VSP = measureVoltage(RSP1, RSP2, nbSamples, VSPPin);
   *VSPMean += *VSP;
   *PSPMean += (*VSP)*I[1];
   *counterMean += 1;
@@ -109,15 +107,15 @@ void updateMeasures(int timeHour, int nbBatteries, int *Hcounter, int *HSPcounte
     checkH[*Hcounter] = true;
     hourDay[*Hcounter] = rtc.getHours();
     minuteDay[*Hcounter] = rtc.getMinutes();
-    if(*normH == 0) { *normH = 1; }
-    for(int i = 0; i < nbBatteries; i++) {
-      VH[5*i + *Hcounter] = VH[5*i + *Hcounter]/ *normH;
-      IH[5*i + *Hcounter] = IH[5*i + *Hcounter]/ *normH;
-      SH[5*i + *Hcounter] = SH[5*i + *Hcounter]/ *normH;
-      PH[5*i + *Hcounter] = PH[5*i + *Hcounter]/ *normH;
-    }
-    *normH = 0;
     if(*Hcounter < 4) {
+      if(*normH == 0) { *normH = 1; }
+      for(int i = 0; i < nbBatteries; i++) {
+        VH[5*i + *Hcounter] = VH[5*i + *Hcounter]/ *normH;
+        IH[5*i + *Hcounter] = IH[5*i + *Hcounter]/ *normH;
+        SH[5*i + *Hcounter] = SH[5*i + *Hcounter]/ *normH;
+        PH[5*i + *Hcounter] = PH[5*i + *Hcounter]/ *normH;
+      }
+      *normH = 0;
       *Hcounter += 1;
     }
   }
@@ -133,19 +131,27 @@ void updateMeasures(int timeHour, int nbBatteries, int *Hcounter, int *HSPcounte
     }
   }
   if(*Hcounter == 4 && *HSPcounter == 8) {
+    if(*normH == 0) { *normH = 1; }
+    for(int i = 0; i < nbBatteries; i++) {
+      VH[5*i + *Hcounter] = VH[5*i + *Hcounter]/ *normH;
+      IH[5*i + *Hcounter] = IH[5*i + *Hcounter]/ *normH;
+      SH[5*i + *Hcounter] = SH[5*i + *Hcounter]/ *normH;
+      PH[5*i + *Hcounter] = PH[5*i + *Hcounter]/ *normH;
+    }
+    *normH = 0;
     sendMeasures(day, month, year, VMean, IMean, SMean, TMean, PMean, *VSPMean, *PSPMean, nbBatteries, VH, IH, SH, hourDay, minuteDay);
     reInitialiseMeasures(VH, IH, SH, PH, PSPH, VSPMean, PSPMean, Hcounter, HSPcounter, counterMean, nbBatteries);
   }
-  if(timeHour >= listheureBat[*Hcounter] && timeHour < listheureBat[*Hcounter] + 1) {
+  if(timeHour >= listheureBat[*Hcounter-1] && timeHour < listheureBat[*Hcounter-1] + 1) {
     for(int i = 0; i < nbBatteries; i++) {
       VH[5*i + *Hcounter] += V[i];
       IH[5*i + *Hcounter] += I[0];
       SH[5*i + *Hcounter] += X[2*i];
       PH[5*i + *Hcounter] += V[i]*I[0];
-      *normH += 1;
     }
+    *normH += 1;
   }
-  if(timeHour >= listheureSP[*HSPcounter] && timeHour < listheureSP[*HSPcounter] + 1) {
+  if(timeHour >= listheureSP[*HSPcounter-1] && timeHour < listheureSP[*HSPcounter-1] + 1) {
     PSPH[*HSPcounter] += VSP*I[1];
     *normHSP += 1;
   }
