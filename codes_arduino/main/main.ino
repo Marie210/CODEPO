@@ -52,6 +52,14 @@ unsigned long SDTime = 0.0;
 double updateSDTime = 1 * 60 * 1000;
 bool SDon = false;
 bool SDavailable = false;
+/* -- THERMISTANCES -- */
+double Thermistances[18] = { -88.4034e-3, 151.2442e-4, -607.4101e-7, // entree du multiplexeur : X0 = TH1 = cable vert
+                            18.9321e-3, -26.9060e-4, 117.2023e-7, // entree du multiplexeur : X1 = TH2 = cable orange
+                            10.6911e-3, -13.3973e-4, 63.5877e-7, // entree du multiplexeur : X2 = TH1 = cable orange + bic bleu
+                            26.6005e-3, -39.7298e-4, 170.3599e-7, // entree du multiplexeur : X3 = TH4 = cable bleu
+                            88.9968e-3, -144.2687e-4, 604.6228e-7, // entree du multiplexeur : X4 = TH5 = cable brun long
+                            19.3291e-3, -25.9457e-4, 99.8440e-7 // entree du multiplexeur : X5 = TH6 = cable brun court
+                          };
 /* -- MEASURES -- */
 const int nbBatteries = 6; // nombre de batteries => de 1 à 6 + 1 pour panneux solaires
 const int nbCurrent = 2;
@@ -72,13 +80,13 @@ int Vnb = 0;
 int Inb = 0;
 double Valim = 0.0;
 double RV = 32300;
-double pot[nbBatteries] = {20400, 20400, 20400, 10000, 10000, 10000}; 
-double RVcc1 = 500000; 
-double RVcc2 = 500000;
+double pot[nbBatteries] = {10000, 10000, 10000, 10000, 10000, 10000}; 
+double RAlim1 = 50; 
+double RAlim2 = 50;
 double RT = 4700;
 double RSP1 = 1000000;
 double RSP2 = 20400;
-int numSamples = 100;
+int nbSamples = 100;
 double mvPerI_20 = 31.25;
 double offset_20 = 0.36;
 double mvPerI_100 = 6.25;
@@ -131,7 +139,7 @@ double PSPH[9] = {};
 //double listheureSP[9] = {8, 9, 10, 11, 12, 13, 14, 15, 16};
 double listheureBat[5] = {}; 
 double listheureSP[9] = {};
-double HTime = 0.0, updateHTime = 0.0;
+double HTime = 0.0, updatePublishTime = 5000;
 double normH = 0, normHSP = 0;
 bool checkH[5] = {false, false, false, false, false};
 bool checkSPH[9] = {false, false, false, false, false, false, false, false, false};
@@ -205,7 +213,6 @@ void setup() {
 }
 
 void loop() {
-
   if(flag_init == -1) {
       if(millis() - buttonTime > 100) {
         buttonTime = millis();
@@ -229,43 +236,37 @@ void loop() {
   else if(flag_init == 5) {
       if(mode == 0 && on) {
         /* --- Measure VOLTAGE + CURRENT + TEMP ---*/
-        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, PMean, &PSPMean, VMean, IMean, TMean, &VSPMean, &counterMean, X, SMean);
+        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, nbSamples, RT, RAlim1, RAlim2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, PMean, &PSPMean, VMean, IMean, TMean, &VSPMean, &counterMean, X, SMean, Thermistances);
         /* --- AFFICHAGE ---*/
-    
         DeltaT = (double)(millis()*0.001 - kalmanTime);
         kalmanTime = (double)(millis()*0.001);
         //DeltaT = (double)(millis() - kalmanTime);
         //kalmanTime = (double)(millis());
-        //DeltaT = 0.5;
-        
-        Serial.print("---- DeltaT = "); Serial.println(DeltaT);
+        //DeltaT = 0.5;        
+        //Serial.print("---- DeltaT = "); Serial.println(DeltaT);
         
         /* --- COULOMB Counting ---*/
         for(int i = 0; i < nbBatteries; i++) {
           SoC_coulomb[i] -= (I[0] * DeltaT) / Qn_rated; // Estimated SoC in %
         }
-      
         /* --- KALMANN FILTER ---*/
         double time1 = micros();
         double time2 = micros();
-        for(int i = 0; i < 1; i++) { // Kalmann filter applied on each 
+        for(int i = 0; i < nbBatteries; i++) { // Kalmann filter applied on each 
            extendedKalmanFilter(I[0], I[0], X + 2*i, Z + 3*i, SOCOCV, dSOCOCV, V[i], P_x + 4*i, P_z + 9*i, Q_x + 4*i, Q_z + 9*i, &betha_x[i], &betha_z[i], &alpha_x[i], &alpha_z[i], rho_x, rho_z, DeltaT, Qn_rated);
-           Serial.print("------- Kalman "); Serial.print(i); Serial.print(" => "); Serial.print(micros() - time2); Serial.println(" us.");
-           Serial.print("SOC = "); Serial.println(X[2*i]);
+           //Serial.print("------- Kalman "); Serial.print(i); Serial.print(" => "); Serial.print(micros() - time2); Serial.println(" us.");
+           //Serial.print("SOC = "); Serial.println(X[2*i]);
            time2 = micros();
         }
         double computationTimeMS = micros() - time1;
         //Serial.print("Total computation time : "); Serial.print(computationTimeMS); Serial.println(" us.");
-
         if(SDon && SDavailable) {
           printSd(fileDataName, nbBatteries, V, I, T, X, VSP, rtc.getHours(), rtc.getMinutes(), rtc.getSeconds(), rtc.getDay(), rtc.getMonth(), rtc.getYear());
         }
       
     } else if(mode == 1 && on) {
 
-        V[0] = measureVoltage(RV, pot[0], numSamples, VPin);
-        I[0] = measureCurrent(numSamples, offset_20, mvPerI_20, pinI, VccIPin);
-        T[0] = mesureTemperature(TPin, VccPin, RT, RVcc1, RVcc2);
+        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, nbSamples, RT, RAlim1, RAlim2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, PMean, &PSPMean, VMean, IMean, TMean, &VSPMean, &counterMean, X, SMean, Thermistances);
         
         /* ---- save data to SD card ---- */
         if(SDon && SDavailable) {
@@ -286,7 +287,7 @@ void loop() {
         }
     } else if(mode == 2 && on) {
         /* ---- MEASURES => ALIMENTATION - VOLTAGE - CURRENT - TEMPERATURE - TIME ---- */
-        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, numSamples, RT, RVcc1, RVcc2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, PMean, &PSPMean, VMean, IMean, TMean, &VSPMean, &counterMean, X, SMean);
+        takeMeasures(V, I, T, &VSP, nbBatteries, nbCurrent, RV, pot, nbSamples, RT, RAlim1, RAlim2, RSP1, RSP2, offset_20, offset_100, mvPerI_20, mvPerI_100, PMean, &PSPMean, VMean, IMean, TMean, &VSPMean, &counterMean, X, SMean, Thermistances);
         /* ---- save data to SD card ---- */
         if(SDon && SDavailable) {
           printSd(fileDataName, nbBatteries, V, I, T, X, VSP, rtc.getHours(), rtc.getMinutes(), rtc.getSeconds(), rtc.getDay(), rtc.getMonth(), rtc.getYear());
@@ -300,15 +301,15 @@ void loop() {
 
     if(millis() - lcdTime > updateLCDTime) {
       lcdTime = millis();
-      printLCD(affichage, V[Vnb], Vnb, Inb, I[Inb], X[(Vnb)*3], on, mode, SDon, T[Vnb], day, month, year, hours, minutes, seconds);
+      printLCD(affichage, V[Vnb], Vnb, Inb, I[Inb], X[(Vnb)*2], on, mode, SDon, T[Vnb], day, month, year, hours, minutes, seconds);
     }
 
     if(millis() - SDTime > updateSDTime && SDavailable) {
       SDTime = millis();
       saveSD(fileMemoryName, X, Z, P_x, P_z, Q_x, Q_z, alpha_x, betha_x, alpha_z, betha_z, SOCOCV, dSOCOCV, Qn_rated, voltage_rated, current_rated);
     }
-    
-    if(millis() - HTime > updateHTime && !initClick) {
+    if(millis() - HTime > updatePublishTime && initClick) {
+      Serial.print("yo");
       updateMeasures(rtc.getHours(), nbBatteries, &Hcounter, &HSPcounter, &normH, &normHSP, listheureBat, listheureSP, VMean, IMean, SMean, TMean, PMean, &VSPMean, &PSPMean, &counterMean, V, I, X, VSP, VH, IH, SH, PH, PSPH, hourDaySP, minuteDaySP, hourDay, minuteDay, &day, &month, &year);
     }
     
