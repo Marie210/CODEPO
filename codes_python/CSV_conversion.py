@@ -276,21 +276,25 @@ def correctBatteriesCSV(CSVfile):
     
     return dico
 def commande( power, mode  ):
-    print ("ok\n")
+ 
+    
     X= [8,9,10,11,12,13,14,15,16]
+    for i in  range(len(power)):
+        power[i] = float(power[i])
+    
     if (mode == 1):
-        plt.title('Puissance théorique en sortie des panneaux solaire')
+        plt.title('Puissance mesurée en sortie des panneaux ')
         plt.xlabel('Heures de la journée [H]')
         plt.ylabel('Puissance en courant continue  [W]')
         plt.plot(X, power)   
         plt.show()
-    elif (mode == 2): 
+    if (mode == 2): 
         plt.title('Puissance théorique mesurée en sortie des panneaux solaire sans le MPPT')
         plt.xlabel('Heures de la journée [H]')
         plt.ylabel('Puissance en courant continue  [W]')
         plt.plot(X, power)   
         plt.show()
-    elif (mode == 3):
+    if (mode == 3):
         plt.title('Puissance théorique du mppt  ')
         plt.xlabel('Heures de la journée [H]')
         plt.ylabel('Puissance en courant continue  [W]')
@@ -352,8 +356,9 @@ def test_power(liste_bat,liste_power,power_theo):
                     
                     txt = canvas.create_text(300, 60, text=mot, font="Arial 16 italic", fill="red")
                     canvas.pack()
-                    button1 = Button(fenetre, text ='Puissance théorique', command= lambda: commande(liste_power,1))
-                    button2 = Button(fenetre, text ='Puissance mesurée', command= lambda: commande(power_theo,2) )
+                    
+                    button1 = Button(fenetre, text ='Puissance théorique', command= lambda: commande(power_theo,2))
+                    button2 = Button(fenetre, text ='Puissance mesurée', command= lambda: commande(liste_power,1) )
                     
                     button1.pack(side=LEFT, padx=5, pady=5)
                     button2.pack(side=RIGHT, padx=5, pady=5)
@@ -363,7 +368,7 @@ def test_power(liste_bat,liste_power,power_theo):
                     
                     fenetre.mainloop()
 
-def correctSolarCSV(CSVfile,power):
+def correctSolarCSV(CSVfile,power_theo,puissance , tension, courant ):
     '''
     Corrige le CSV partiel de manière à afficher la puissance théorique des panneaux ansi que la puissance réel ,  à chaque heure
     entre 8h et 16h.  
@@ -393,24 +398,64 @@ def correctSolarCSV(CSVfile,power):
     liste[1]= liste[1][:len(liste[1])-1]+",Heure"+"\n"
     liste[1]= liste[1][:len(liste[1])-1]+",Puissance_theorique"+"\n"
     string = liste[0] + liste[1]
-    
-    j = liste[2].find(',')
-    j2 = liste[2].find(',', j+1)
-    j3 = liste[2].find(',', j2 + 1)
+   
     date = liste[2][:9]
-    i= liste[2][j2+1:j3]
-    v= liste[2][j+1:j2]
-    var = liste[2].find(']')
-    pt= liste[2][var+3:len(liste[2])-1]
-    puissance = liste[2][liste[2].find('[') + 1:var].replace(', ', ' ')
-    puissance = puissance.split()
+   
+    
+    
+    
     for l in range(len(heures)):
-        s = date + "," + i + "," + v +"," + puissance[l] +  ","+heures[l]+ "," + str(power[l]) + "\n"
+        s = date + "," + str(courant[l]) + "," + str(tension[l]) +"," + str(puissance[l]) +  ","+heures[l]+ "," + str(power_theo[l]) + "\n"
         string = string+s
     f = open(CSVfile, "w")
     f.write(string)
     f.close()
+def extract(text):
+    pos = 17
+    I =[]
+    V=[]
+    P=[]
+    string =[]
+    for i in range(3):
+        
+        if (i ==0):
+           
+            string = text[text.find('solarPannels') +pos:]
+            
+            start =  string.find('[')
+            end =  string . find (']')
+            I =  string[start+1:end].replace(', ', ' ')
+            I.split()
+            
+            pos = end
+        if (i==1):
+           
+          
+            
+            string  =string[pos+1:]
+            
+            start =  string.find('[')
+            
+            end =  string . find (']')
+            
+            V =  string[start+1:end].replace(', ', ' ')
+            V.split()
+            pos = end
+        if (i==2):
+            
+            
+            
+            string  =string[pos+1:]
+           
+            start =  string.find('[')
+            end =  string . find (']')
+            P =  string[start+1:end].replace(', ', ' ')
+            P.split()
+            
+            pos = end
 
+            
+    return I,V,P
 
 def traitement (text):
     '''
@@ -426,26 +471,33 @@ def traitement (text):
     None.
 
     '''
-    #text = "{'batteries':[{'id':0, 'S':[0.8, 0.92, 0.71, 0.94, 0.92, 0.74],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'H':[1, 3, 6, 9, 12], 'T':5.0, 'D': '25-7-2022'},{'id':1, 'S':[0.6, 0.4, 0.8, 0.1, 0.92, 0.5],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8],'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':3.0},{'id':2, 'S':[1.0, 1.0, 1.0, 1.0, 1.0, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':3, 'S':[1.0, 1.0, 1.0, 1.0, 1.0, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':4, 'S':[1.0, 1.0, 1.0, 1.0, 1.0, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':5, 'S':[0.0, 0.0, 0.0, 0.0, 0.1, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0}], 'solarPannels': [{'D': '25-7-2022', 'I': -6.9, 'V': 0.0, 'P': [1.1, 1.1, 1.1, 1.1, 1.1, 5.3, 14, 15, 16]}]}"
+    #text = "{'batteries':[{'id':0, 'S':[0.8, 0.92, 0.71, 0.94, 0.92, 0.74],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'H':[1, 3, 6, 9, 12], 'T':5.0, 'D': '25-7-2022'},{'id':1, 'S':[0.6, 0.4, 0.8, 0.1, 0.92, 0.5],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8],'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':3.0},{'id':2, 'S':[1.0, 1.0, 1.0, 1.0, 1.0, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':3, 'S':[1.0, 1.0, 1.0, 1.0, 1.0, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':4, 'S':[1.0, 1.0, 1.0, 1.0, 1.0, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':5, 'S':[0.0, 0.0, 0.0, 0.0, 0.1, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0}], 'solarPannels': [{'D': '25-7-2022', 'I': [2.4, 4.5, 8.1, 2.4, 4.5, 8.1, 2.4, 4.5, 8.1], 'V': [2.4, 4.5, 8.1, 2.4, 4.5, 8.1, 2.4, 4.5, 8.2], 'P': [1.1, 1.1, 1.1, 1.1, 1.1, 5.3, 14, 15, 16]}]}"
     file_pv = "solar_data2.csv"
     file_pv_total = "solar_data_total.csv"
     file_batterie = "batteries_data2.csv"
     file_batterie_total = "batteries_data_total.csv"
-    # f =  open(text_file)
-    # text = f.read()
-    string = text[text.find('solarPannels') +19:]
-    liste =string[string.find('[')+1:string.find(']')].replace(', ', ' ')
-    liste = liste.split()
-    
+    res =  extract(text)
+    I =  res[0].split()
+    V =  res[1].split()
+    P =  res[2].split()
+    for elem in range(len(I)):
+        I[elem] = float(I[elem])
+        V[elem] = float(V[elem])
+        P[elem] = float(P[elem])
+    print("I = ",I)
+    print("V = ",V)
+    print("P = ",P)
     jsonMessage = readJson(text)
     
     convertToCsvBatteries(jsonMessage)
     power_theo = calcul_puissance_theorique()
+   
     convertToCsvSolar(jsonMessage,power_theo )
     
     dico = correctBatteriesCSV(file_batterie)
-    correctSolarCSV(file_pv,power_theo)
-    test_power(dico,liste,power_theo) 
+    print (dico)
+    correctSolarCSV(file_pv,power_theo,P,V,I)
+    test_power(dico,P,power_theo) 
     add_csv(file_pv, file_pv_total)
     add_csv(file_batterie, file_batterie_total)
     erased('solar_data.csv')
