@@ -157,6 +157,8 @@ int flag_publish = 1;  // si sur 1 publish activé si sur 0 publish désactivé
 unsigned long previous_millis_publish = 0.0;
 bool start = false;
 bool initClick = false;
+/* -- alertes -- */
+int counter_alerts[3*nbBatteries] = {0};
 
 
 void setup() {
@@ -258,6 +260,10 @@ void loop() {
            //Serial.print("SOC = "); Serial.println(X[2*i]);
            time2 = micros();
         }
+
+        /* ---Detect if alerts must be sent ---*/
+        detect_alertes(nbBatteries, V, X, T, &flag_init, resetThingstreamPin, counter_alerts);
+        
         double computationTimeMS = micros() - time1;
         //Serial.print("Total computation time : "); Serial.print(computationTimeMS); Serial.println(" us.");
         if(SDon && SDavailable) {
@@ -310,7 +316,7 @@ void loop() {
     }
     if(millis() - HTime > updatePublishTime && initClick) {
       Serial.print("yo");
-      updateMeasures(rtc.getHours(), nbBatteries, &Hcounter, &HSPcounter, &normH, &normHSP, listheureBat, listheureSP, VMean, IMean, SMean, TMean, PMean, &VSPMean, &PSPMean, &counterMean, V, I, X, VSP, VH, IH, SH, PH, PSPH, hourDaySP, minuteDaySP, hourDay, minuteDay, &day, &month, &year);
+      //updateMeasures(rtc.getHours(), nbBatteries, &Hcounter, &HSPcounter, &normH, &normHSP, listheureBat, listheureSP, VMean, IMean, SMean, TMean, PMean, &VSPMean, &PSPMean, &counterMean, V, I, X, VSP, VH, IH, SH, PH, PSPH, hourDaySP, minuteDaySP, hourDay, minuteDay, &day, &month, &year);
     }
     
     if(oldMode != mode) {

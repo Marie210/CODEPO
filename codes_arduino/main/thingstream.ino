@@ -239,3 +239,56 @@ void convertMessage(String input, bool *on, int *mode, double *X, double *Z,
       }
   }
 }
+
+//detect if an alert needs to be sent and end it 
+boolean detect_alertes(int nb_batteries, double *tension, double *SOC, double *temperature, int *flag_init, int resetThingstreamPin, int *counter_alerts){
+
+  boolean need_alert = false;
+  char message[10000] = "\0";
+  char res[500];
+  sprintf(res, "AT+IOTPUBLISH=\"Alertes\",1,\"");
+  strcat(message, res);
+  for(int i = 0; i < nbBatteries; i++){ 
+    if (SOC[2*i] < 0.5){
+      counter_alerts[3*i] += 1;
+      if (counter_alerts[3*i] == 20){
+        need_alert = true;
+        sprintf(res, "Attention, il ne reste plus que %f % de charge à votre batterie %d! ", 100*SOC[2*i], i);
+        strcat(message, res);
+      }
+    }
+    else if(counter_alerts[3*i] > 0){
+      counter_alerts[3*i] -= 1;
+    }
+
+    if (tension[i] > 8){
+      counter_alerts[3*i+1] += 1;
+      if (counter_alerts[3*i+1] == 20){
+  
+        need_alert = true;
+        sprintf(res, "Attention, une surtension de %f a été détectée sur la batterie %d! Ceci est une surtension. ", tension[i], i);
+        strcat(message, res);
+      }
+    }
+    else if(counter_alerts[3*i+1] > 0){
+      counter_alerts[3*i+1] -= 1;
+    }
+    if (temperature[i] > 35){
+      counter_alerts[3*i+2] += 1;
+      if (counter_alerts[3*i+2] == 20){
+        need_alert = true;
+        sprintf(res, "Attention, la temperature de la batterie %d est de %f °C! Ceci est une surchauffe.\" ", i, temperature[i]);
+        strcat(message, res);
+      }
+    }
+    else if(counter_alerts[3*i+2] > 0){
+      counter_alerts[3*i+2] -= 1;
+    }
+  } 
+  if (need_alert){
+   Serial.println("alerte :");
+   Serial.println(message);
+   //Serial1.println(message);
+  }
+  return need_alert;
+}
