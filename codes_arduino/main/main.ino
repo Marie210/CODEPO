@@ -315,7 +315,6 @@ void loop() {
       saveSD(fileMemoryName, X, Z, P_x, P_z, Q_x, Q_z, alpha_x, betha_x, alpha_z, betha_z, SOCOCV, dSOCOCV, Qn_rated, voltage_rated, current_rated);
     }
     if(millis() - HTime > updatePublishTime && initClick) {
-      Serial.print("yo");
       //updateMeasures(rtc.getHours(), nbBatteries, &Hcounter, &HSPcounter, &normH, &normHSP, listheureBat, listheureSP, VMean, IMean, SMean, TMean, PMean, &VSPMean, &PSPMean, &counterMean, V, I, X, VSP, VH, IH, SH, PH, PSPH, hourDaySP, minuteDaySP, hourDay, minuteDay, &day, &month, &year);
     }
     

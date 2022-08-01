@@ -253,7 +253,7 @@ boolean detect_alertes(int nb_batteries, double *tension, double *SOC, double *t
       counter_alerts[3*i] += 1;
       if (counter_alerts[3*i] == 20){
         need_alert = true;
-        sprintf(res, "Attention, il ne reste plus que %f % de charge à votre batterie %d! ", 100*SOC[2*i], i);
+        sprintf(res, "Attention, il ne reste plus que %0.2f pourcents de charge à votre batterie %d! ", 100*SOC[2*i], i+1);
         strcat(message, res);
       }
     }
@@ -266,7 +266,7 @@ boolean detect_alertes(int nb_batteries, double *tension, double *SOC, double *t
       if (counter_alerts[3*i+1] == 20){
   
         need_alert = true;
-        sprintf(res, "Attention, une surtension de %f a été détectée sur la batterie %d! Ceci est une surtension. ", tension[i], i);
+        sprintf(res, "Attention, une surtension de %0.2f a été détectée sur la batterie %d! Ceci est une surtension. ", tension[i], i+1);
         strcat(message, res);
       }
     }
@@ -277,7 +277,7 @@ boolean detect_alertes(int nb_batteries, double *tension, double *SOC, double *t
       counter_alerts[3*i+2] += 1;
       if (counter_alerts[3*i+2] == 20){
         need_alert = true;
-        sprintf(res, "Attention, la temperature de la batterie %d est de %f °C! Ceci est une surchauffe.\" ", i, temperature[i]);
+        sprintf(res, "Attention, la temperature de la batterie %d est de %0.2f °C! Ceci est une surchauffe. ", i+1, temperature[i]);
         strcat(message, res);
       }
     }
@@ -286,9 +286,11 @@ boolean detect_alertes(int nb_batteries, double *tension, double *SOC, double *t
     }
   } 
   if (need_alert){
+   sprintf(res, "\"");
+   strcat(message, res);
    Serial.println("alerte :");
    Serial.println(message);
-   //Serial1.println(message);
+   Serial1.println(message);
   }
   return need_alert;
 }
