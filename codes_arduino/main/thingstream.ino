@@ -132,7 +132,7 @@ int analyse (String st) {
 }
 
 
-void publish(int nbBatteries, double *VH, double *IH, double *SH, double *PH, double *PSPH, int *hourDay, int *minuteDay, int *hourDaySP, int *minuteDaySP, int day, int month, int year, double *VMean, double *IMean, double *SMean, double *TMean, double VSPMean, double *PMean, double PSPMean){
+void publish(int nbBatteries, double *VH, double *IH, double *SH, double *PH, double *PSPH, double *VSPH, double *ISPH, int *hourDay, int *minuteDay, int *hourDaySP, int *minuteDaySP, int day, int month, int year, double *VMean, double *IMean, double *SMean, double *TMean, double VSPMean, double *PMean, double PSPMean){
 
     char message[10000] = "\0";
     char res[500];
@@ -158,7 +158,7 @@ void publish(int nbBatteries, double *VH, double *IH, double *SH, double *PH, do
       }
       strcat(message, res);
     }
-    sprintf(res, "],'solarPannels':[{'D':'%d-%d-%d','I':%0.1f,'V':%0.1f,'P':[%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f]}]}\"", day, month, year, IMean[1], VSPMean, PSPH[0], PSPH[1], PSPH[2], PSPH[3], PSPH[4], PSPH[5], PSPH[6], PSPH[7], PSPH[8]);
+    sprintf(res, "],'solarPannels':[{'D':'%d-%d-%d','I':[%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f],'V':[%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f],'P':[%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f]}]}\"", day, month, year, ISPH[0], ISPH[1], ISPH[2], ISPH[3], ISPH[4], ISPH[5], ISPH[6], ISPH[7], ISPH[8], VSPH[0], VSPH[1], VSPH[2], VSPH[3], VSPH[4], VSPH[5], VSPH[6], VSPH[7], VSPH[8], PSPH[0], PSPH[1], PSPH[2], PSPH[3], PSPH[4], PSPH[5], PSPH[6], PSPH[7], PSPH[8]);
     strcat(message, res);
     Serial.println("message :");
     Serial.println(message);
@@ -241,7 +241,7 @@ void convertMessage(String input, bool *on, int *mode, double *X, double *Z,
 }
 
 //detect if an alert needs to be sent and end it 
-boolean detect_alertes(int nb_batteries, double *tension, double *SOC, double *temperature, int *flag_init, int resetThingstreamPin, int *counter_alerts){
+void detect_alertes(int nb_batteries, double *tension, double *SOC, double *temperature, int *flag_init, int resetThingstreamPin, int *counter_alerts){
 
   boolean need_alert = false;
   char message[10000] = "\0";
@@ -264,7 +264,6 @@ boolean detect_alertes(int nb_batteries, double *tension, double *SOC, double *t
     if (tension[i] > 8){
       counter_alerts[3*i+1] += 1;
       if (counter_alerts[3*i+1] == 20){
-  
         need_alert = true;
         sprintf(res, "Attention, une surtension de %0.2f a été détectée sur la batterie %d! Ceci est une surtension. ", tension[i], i+1);
         strcat(message, res);
@@ -284,6 +283,17 @@ boolean detect_alertes(int nb_batteries, double *tension, double *SOC, double *t
     else if(counter_alerts[3*i+2] > 0){
       counter_alerts[3*i+2] -= 1;
     }
+    if (tension[i] < 10){
+      counter_alerts[3*i+3] += 1;
+      if (counter_alerts[3*i+3] == 20){
+        need_alert = true;
+        sprintf(res, "Attention, une sous-tension de %0.2f a été détectée sur la batterie %d! Ceci est une sous-tension. ", tension[i], i+1);
+        strcat(message, res);
+      }
+    }
+    else if(counter_alerts[3*i+2] > 0){
+      counter_alerts[3*i+2] -= 1;
+    }
   } 
   if (need_alert){
    sprintf(res, "\"");
@@ -292,5 +302,4 @@ boolean detect_alertes(int nb_batteries, double *tension, double *SOC, double *t
    Serial.println(message);
    Serial1.println(message);
   }
-  return need_alert;
 }
