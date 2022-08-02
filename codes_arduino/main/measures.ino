@@ -102,7 +102,7 @@ void takeMeasures(double *V, double *I, double *T, double *VSP, int nbBatteries,
   *counterMean += 1;
 }
 
-void updateMeasures(int timeHour, int nbBatteries, int *Hcounter, int *HSPcounter, double *normH, double *normHSP, double *listheureBat, double *listheureSP, double *VMean, double *IMean, double *SMean, double *TMean, double *PMean, double *VSPMean, double *PSPMean, int *counterMean, double *V, double *I, double *X, double VSP, double *VH, double *IH, double *SH, double *PH, double *PSPH, int *hourDaySP, int *minuteDaySP, int *hourDay, int *minuteDay, int *day, int *month, int *year) {
+void updateMeasures(int timeHour, int nbBatteries, int *Hcounter, int *HSPcounter, double *normH, double *normHSP, double *listheureBat, double *listheureSP, double *VMean, double *IMean, double *SMean, double *TMean, double *PMean, double *VSPMean, double *PSPMean, int *counterMean, double *V, double *I, double *X, double VSP, double *VH, double *IH, double *SH, double *PH, double *PSPH, double *VSPH, double *ISPH, int *hourDaySP, int *minuteDaySP, int *hourDay, int *minuteDay, int *day, int *month, int *year) {
   if(timeHour == listheureBat[*Hcounter] && checkH[*Hcounter] == false) {
     checkH[*Hcounter] = true;
     hourDay[*Hcounter] = rtc.getHours();
@@ -125,6 +125,8 @@ void updateMeasures(int timeHour, int nbBatteries, int *Hcounter, int *HSPcounte
     minuteDaySP[*HSPcounter] = rtc.getMinutes();
     if(*normHSP == 0) { *normHSP = 1; }
     PSPH[*HSPcounter] = PSPH[*HSPcounter]/ *normHSP;
+    VSPH[*HSPcounter] = VSPH[*HSPcounter]/ *normHSP;
+    ISPH[*HSPcounter] = ISPH[*HSPcounter]/ *normHSP;
     *normHSP = 0;
     if(*HSPcounter < 8) {
       *HSPcounter += 1;
@@ -139,8 +141,8 @@ void updateMeasures(int timeHour, int nbBatteries, int *Hcounter, int *HSPcounte
       PH[5*i + *Hcounter] = PH[5*i + *Hcounter]/ *normH;
     }
     *normH = 0;
-    sendMeasures(day, month, year, VMean, IMean, SMean, TMean, PMean, *VSPMean, *PSPMean, nbBatteries, VH, IH, SH, hourDay, minuteDay);
-    reInitialiseMeasures(VH, IH, SH, PH, PSPH, VSPMean, PSPMean, Hcounter, HSPcounter, counterMean, nbBatteries);
+    sendMeasures(day, month, year, VMean, IMean, SMean, TMean, PMean, *VSPMean, *PSPMean, nbBatteries, VH, IH, SH, PH, PSPH, VSPH, ISPH, hourDay, minuteDay);
+    reInitialiseMeasures(VH, IH, SH, PH, PSPH, VSPH, ISPH, VSPMean, PSPMean, Hcounter, HSPcounter, counterMean, nbBatteries);
   }
   if(timeHour >= listheureBat[*Hcounter-1] && timeHour < listheureBat[*Hcounter-1] + 1) {
     for(int i = 0; i < nbBatteries; i++) {
@@ -153,11 +155,13 @@ void updateMeasures(int timeHour, int nbBatteries, int *Hcounter, int *HSPcounte
   }
   if(timeHour >= listheureSP[*HSPcounter-1] && timeHour < listheureSP[*HSPcounter-1] + 1) {
     PSPH[*HSPcounter] += VSP*I[1];
+    VSPH[*HSPcounter] += VSP;
+    ISPH[*HSPcounter] += I[1];
     *normHSP += 1;
   }
 }
 
-void reInitialiseMeasures(double *VH, double *IH, double *SH, double *PH, double *PSPH, double *VSPMean, double *PSPMean, int *Hcounter, int *HSPcounter, int *counterMean, int nbBatteries) {
+void reInitialiseMeasures(double *VH, double *IH, double *SH, double *PH, double *PSPH,  double *VSPH, double *ISPH, double *VSPMean, double *PSPMean, int *Hcounter, int *HSPcounter, int *counterMean, int nbBatteries) {
   for(int i = 0; i < *Hcounter * nbBatteries; i++) {
     VH[i] = 0;
     IH[i] = 0;
@@ -181,7 +185,7 @@ void reInitialiseMeasures(double *VH, double *IH, double *SH, double *PH, double
   *counterMean = 0;
 }
 
-void sendMeasures(int *day, int *month, int *year, double *VMean, double *IMean, double *SMean, double *TMean, double *PMean, double VSPMean, double PSPMean, int nbBatteries, double *VH, double *IH, double *SH, int *hourDay, int *minuteDay) {
+void sendMeasures(int *day, int *month, int *year, double *VMean, double *IMean, double *SMean, double *TMean, double *PMean, double VSPMean, double PSPMean, int nbBatteries, double *VH, double *IH, double *SH, double *PH, double *PSPH, double *VSPH, double *ISPH, int *hourDay, int *minuteDay) {
   *day = rtc.getDay();
   *month = rtc.getMonth();
   *year = rtc.getYear();
@@ -192,7 +196,7 @@ void sendMeasures(int *day, int *month, int *year, double *VMean, double *IMean,
     TMean[i] /= (double)counterMean;
     PMean[i] /= (double)counterMean;
   }
-  publish(nbBatteries, VH, IH, SH, PH, PSPH, hourDay, minuteDay, hourDaySP, minuteDaySP, *day, *month, *year, VMean, IMean, SMean, TMean, VSPMean/counterMean, PMean, PSPMean/counterMean);
+  publish(nbBatteries, VH, IH, SH, PH, PSPH, VSPH, ISPH, hourDay, minuteDay, hourDaySP, minuteDaySP, *day, *month, *year, VMean, IMean, SMean, TMean, VSPMean/counterMean, PMean, PSPMean/counterMean);
 }
 
 uint32_t ticks_diff(uint32_t t0, uint32_t t1) {
