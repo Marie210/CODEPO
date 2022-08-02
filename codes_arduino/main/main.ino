@@ -53,11 +53,11 @@ double updateSDTime = 1 * 60 * 1000;
 bool SDon = false;
 bool SDavailable = false;
 /* -- THERMISTANCES -- */
-double Thermistances[18] = { -88.4034e-3, 151.2442e-4, -607.4101e-7, // entree du multiplexeur : X0 = TH1 = cable vert
+double Thermistances[18] = { -5.5995e-3, 13.7427e-4, -47.1550e-7, // entree du multiplexeur : X0 = TH1 = cable vert
                             18.9321e-3, -26.9060e-4, 117.2023e-7, // entree du multiplexeur : X1 = TH2 = cable orange
-                            10.6911e-3, -13.3973e-4, 63.5877e-7, // entree du multiplexeur : X2 = TH1 = cable orange + bic bleu
+                            10.6911e-3, -13.3973e-4, 63.5877e-7, // entree du multiplexeur : X2 = TH3 = cable orange + bic bleu
                             26.6005e-3, -39.7298e-4, 170.3599e-7, // entree du multiplexeur : X3 = TH4 = cable bleu
-                            88.9968e-3, -144.2687e-4, 604.6228e-7, // entree du multiplexeur : X4 = TH5 = cable brun long
+                            -1.9494e-3, 7.5657e-4, -21.0736e-7, // entree du multiplexeur : X4 = TH5 = cable brun long
                             19.3291e-3, -25.9457e-4, 99.8440e-7 // entree du multiplexeur : X5 = TH6 = cable brun court
                           };
 /* -- MEASURES -- */
@@ -134,6 +134,7 @@ int day = 25, month = 7, year = 2022; // jour - mois - année
 int hourDay[5], minuteDay[5];
 int hourDaySP[9], minuteDaySP[9];
 double VH[5*nbBatteries] = {}, IH[5*nbBatteries] = {0}, SH[5*nbBatteries] = {0}, PH[5*nbBatteries] = {0};
+double VSPH[9] = {}, ISPH[9] = {}; 
 double PSPH[9] = {};
 //double listheureBat[5] = {22, 4, 8, 12, 16}; 
 //double listheureSP[9] = {8, 9, 10, 11, 12, 13, 14, 15, 16};
@@ -158,7 +159,7 @@ unsigned long previous_millis_publish = 0.0;
 bool start = false;
 bool initClick = false;
 /* -- alertes -- */
-int counter_alerts[3*nbBatteries] = {0};
+int counter_alerts[4*nbBatteries] = {0};
 
 
 void setup() {
@@ -315,7 +316,7 @@ void loop() {
       saveSD(fileMemoryName, X, Z, P_x, P_z, Q_x, Q_z, alpha_x, betha_x, alpha_z, betha_z, SOCOCV, dSOCOCV, Qn_rated, voltage_rated, current_rated);
     }
     if(millis() - HTime > updatePublishTime && initClick) {
-      //updateMeasures(rtc.getHours(), nbBatteries, &Hcounter, &HSPcounter, &normH, &normHSP, listheureBat, listheureSP, VMean, IMean, SMean, TMean, PMean, &VSPMean, &PSPMean, &counterMean, V, I, X, VSP, VH, IH, SH, PH, PSPH, hourDaySP, minuteDaySP, hourDay, minuteDay, &day, &month, &year);
+      updateMeasures(rtc.getHours(), nbBatteries, &Hcounter, &HSPcounter, &normH, &normHSP, listheureBat, listheureSP, VMean, IMean, SMean, TMean, PMean, &VSPMean, &PSPMean, &counterMean, V, I, X, VSP, VH, IH, SH, PH, PSPH, VSPH, ISPH, hourDaySP, minuteDaySP, hourDay, minuteDay, &day, &month, &year);
     }
     
     if(oldMode != mode) {
