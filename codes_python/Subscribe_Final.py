@@ -1,11 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Aug  3 11:46:15 2022
-
-@author: tehoe
-"""
-
-# -*- coding: utf-8 -*-
 import paho.mqtt.client as mqtt
 import json
 import os
@@ -136,7 +129,6 @@ def convertToCsvBatteries(jsonLoad):
 def convertToCsvSolar(jsonLoad):
     """
     Fonction traduisant les données contenue dans le format json en un fichier CSV
-
     Parameters
     ----------
     jsonLoad : json text
@@ -299,7 +291,7 @@ def correctBatteriesCSV(CSVfile):
     P = []
 
     for k in range(2, len(liste)):
-        liste[k] = liste[k].replace(',', ' ')
+        liste[k] = liste[k].replace(', ', ' ')
         i = 3
         values = []
         for j in range(4):
@@ -327,7 +319,6 @@ def correctBatteriesCSV(CSVfile):
                 P.append((int(heures[l]), k - 2, float(values[1][l])))
                 if k - 2 == 0:
                     soc_tuple = (heures[l], k - 2, float(values[0][l]), date)
-
                     dico.append(soc_tuple)
 
     data_file = open("batteries_data2.csv", 'w')
@@ -342,21 +333,21 @@ def commande(power, mode):
         power[i] = float(power[i])
 
     if mode == 1:
-        plt.title('Puissance mesurée en sortie des panneaux ')
+        plt.title('Puissance mesurée en sortie des panneaux')
         plt.xlabel('Heures de la journée [H]')
-        plt.ylabel('Puissance en courant continue  [W]')
+        plt.ylabel('Puissance en courant continue [W]')
         plt.plot(heures, power)
         plt.show()
     if mode == 2:
         plt.title('Puissance théorique mesurée en sortie des panneaux solaire sans le MPPT')
         plt.xlabel('Heures de la journée [H]')
-        plt.ylabel('Puissance en courant continue  [W]')
+        plt.ylabel('Puissance en courant continue [W]')
         plt.plot(heures, power)
         plt.show()
     if mode == 3:
-        plt.title('Puissance théorique du mppt  ')
+        plt.title('Puissance théorique du mppt')
         plt.xlabel('Heures de la journée [H]')
-        plt.ylabel('Puissance en courant continue  [W]')
+        plt.ylabel('Puissance en courant continue [W]')
         plt.plot(heures, power)
         plt.show()
 
@@ -526,36 +517,37 @@ def traitement(text):
     sun_hour = [8, 9, 10, 11, 12, 13, 14, 15, 16]
 
     root = Tk()
+    root.title("Mobateli")  # Window title
     root.config(bg="#FFFFE8")  # Background color
     root.geometry('900x700')
-    # label
-    label = Label(root, text="Mobateli 1", bg="yellow", width=100)
-    label.config(font=('Helvetica bold', 26))
-    label.pack()
+
+    title = Label(root, text="Mobateli 1", bg="#ACC8E6", width=100, font=('Helvetica bold', 26))
+    title.pack()
+
     canvas = Canvas(root, width=450, height=560, background='black')
     txt = canvas.create_text(20, 60, text=">>", font="Arial 12 italic", fill="white", anchor="w")
     canvas.place(x=400, y=120)
 
     btn1 = Button(root, text='Affichage SOC',
-                  command=lambda: plt_batterie(canvas, txt, ">> Affichage du SOC", SOC, 1), padx=30, pady=20)
+                  command=lambda: plt_batterie(canvas, txt, ">> Affichage du SOC", SOC, 1), padx=30, pady=20, bg="#ADD8E6")
     btn2 = Button(root, text='Affichage Tension',
-                  command=lambda: plt_batterie(canvas, txt, ">> Affichage tension", V_bat, 2), padx=30, pady=20)
+                  command=lambda: plt_batterie(canvas, txt, ">> Affichage tension", V_bat, 2), padx=30, pady=20, bg="#ADD8E6")
     btn3 = Button(root, text='Affichage Courant',
-                  command=lambda: plt_batterie(canvas, txt, ">> Affichage Courant", I_bat, 3), padx=30, pady=20)
+                  command=lambda: plt_batterie(canvas, txt, ">> Affichage Courant", I_bat, 3), padx=30, pady=20, bg="#ADD8E6")
     btn4 = Button(root, text='Affichage puissance batterie',
                   command=lambda: plt_batterie(canvas, txt, ">> Affichage Puissance batteries", P_bat, 4), padx=30,
-                  pady=20)
+                  pady=20, bg="#ADD8E6")
+    btn5 = Button(root, text='Affichage puissance entré du MPPT',
+                  command=lambda: power_pannel(canvas, txt, ">> Affichage puissance panneaux", P, sun_hour), padx=30,
+                  pady=20, bg="#ADD8E6")
+    btn6 = Button(root, text='Affichage puissance théorique sortie de panneaux',
+                  command=lambda: power_pannel(canvas, txt, ">> Affichage puissance théorique", power_theo,
+                                               sun_hour), padx=30, pady=20, bg="#ADD8E6")
+
     btn1.place(x=5, y=110)
     btn2.place(x=5, y=210)
     btn3.place(x=5, y=310)
     btn4.place(x=5, y=410)
-    btn5 = Button(root, text='Affichage puissance entré du MPPT',
-                  command=lambda: power_pannel(canvas, txt, ">> Affichage puissance panneaux", P, sun_hour), padx=30,
-                  pady=20)
-    btn6 = Button(root, text='Affichage puissance théorique sortie de panneaux',
-                  command=lambda: power_pannel(canvas, txt, ">> Affichage puissance théorique", power_theo,
-                                               sun_hour), padx=30, pady=20)
-
     btn5.place(x=5, y=510)
     btn6.place(x=5, y=610)
 
@@ -574,20 +566,17 @@ def traitement(text):
 def power_pannel(canvas, txt, mot, pt, hour):
     canvas.itemconfigure(txt, text=mot)
     if mot == ">> Affichage puissance théorique":
-
         plt.title('Puissance théorique des panneaux sans batteries')
         plt.xlabel('Heures de la journée [H]')
         plt.ylabel('Puissance en courant continue [W]')
-        plt.plot(hour, pt)
-        plt.show()
-    elif mot == ">> Affichage puissance panneaux":
 
+    elif mot == ">> Affichage puissance panneaux":
         plt.title('Puissance mesurée en sortie des panneaux')
         plt.xlabel('Heures de la journée [H]')
         plt.ylabel('Puissance en courant continue [W]')
-        plt.plot(hour, pt)
-        plt.show()
 
+    plt.plot(hour, pt)
+    plt.show()
 
 def plt_batterie(canvas, txt, mot, pt, mode):
     canvas.itemconfigure(txt, text=mot)
@@ -695,19 +684,18 @@ def on_message(client, userdata, msg):  # Réponse à un message reçu
 
 
 # Create client object with a persistent connection (!clean session), in this mode the broker will store subscription information, and undelivered messages for the client.
-# client = mqtt.Client(client_id=clientid, clean_session=False)
+client = mqtt.Client(client_id=clientid, clean_session=False)
 
 # Callbacks are functions that are called in response to an event, here we attach function to callback
-# client.on_connect = on_connect  # Response to a connection event
-# client.on_message = on_message  # Response to a message received event
+client.on_connect = on_connect  # Response to a connection event
+client.on_message = on_message  # Response to a message received event
 
-# client.username_pw_set(username, password)
+client.username_pw_set(username, password)
 
 # Connection to the brooker
 # port : the network port of the server host to connect to. Defaults to 1883.
 # keepalive : maximum period in seconds allowed between communications with the broker. If no other messages are being exchanged, this controls the rate at which the client will send ping messages to the broker
-# client.connect(host=broker_address, port=1883, keepalive=600)
-# client.loop_forever()
+client.connect(host=broker_address, port=1883, keepalive=600)
+client.loop_forever()
 
-traitement(
-    "{'batteries':[{'id':0,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'H':[3,6,9,12,15],'T':27.9,'D':'25-7-2022'},{'id':1,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':30.7},{'id':2,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.8],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':30.1},{'id':3,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':31.6},{'id':4,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':28.7},{'id':5,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':29.8}],'solarPannels':[{'D':'25-7-2022','I':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],'V':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}]}")
+#traitement("{'batteries':[{'id':0,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'H':[0,0,0,0,0],'T':27.9,'D':'25-7-2022'},{'id':1,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':30.7},{'id':2,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.8],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':30.1},{'id':3,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':31.6},{'id':4,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':28.7},{'id':5,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':29.8}],'solarPannels':[{'D':'25-7-2022','I':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],'V':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}]}")
