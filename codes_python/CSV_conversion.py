@@ -2,8 +2,8 @@ import json
 import os
 import csv
 from DC_conv import calcul_puissance_theorique
-from tkinter import * 
-import numpy as np
+import tkinter as tk 
+
 import matplotlib.pyplot as plt
 
 
@@ -242,6 +242,10 @@ def correctBatteriesCSV(CSVfile):
     heures = []
  
     dico =  []
+    SOC = []
+    V= []
+    I = []
+    P =[]
     for k in range(2, len(liste)):
         liste[k] = liste[k].replace(', ', ' ')
         i = 3
@@ -264,17 +268,22 @@ def correctBatteriesCSV(CSVfile):
         
             
         for l in range(nb_mesures):
-            string = string + str(k - 1) + "," + values[0][l] + "," + values[1][l] + "," + values[2][l] + ","+values[3][l] + ","+ heures[l] + ","+ temperature + ","+ date  +"\n"
-            if (k-1 == 1 and heures[l] != 'moyenne'):
-                soc_tuple = (heures[l] ,k-1,float(values[0][l]),date)
-           
-                dico.append(soc_tuple)
-            
+            string = string + str(k - 2) + "," + values[0][l] + "," + values[1][l] + "," + values[2][l] + ","+values[3][l] + ","+ heures[l] + ","+ temperature + ","+ date  +"\n"
+            if(heures[l] != 'moyenne'):
+                SOC.append((int(heures[l]),k-2, float(values[0][l])))
+                V.append((int(heures[l]),k-2, float(values[1][l])))
+                I.append((int(heures[l]),k-2, float(values[2][l])))
+                P.append((int(heures[l]),k-2, float(values[1][l])))
+                if (k-2 == 0 ):
+                    soc_tuple = (heures[l] ,k-2,float(values[0][l]),date)
+               
+                    dico.append(soc_tuple)
+               
     data_file = open("batteries_data2.csv", 'w')
     data_file.write(string)
     data_file.close()
     
-    return dico
+    return dico,SOC,V,I,P, l
 def commande( power, mode  ):
  
     
@@ -304,7 +313,7 @@ def commande( power, mode  ):
        
     
     
-def test_power(liste_bat,liste_power,power_theo):
+def test_power(liste_bat,liste_power,power_theo,canva):
     '''
     Vérifie si la puissance fournie par les panneaux correspond bien à la puissance 
     théorique demandé par le MPPT en fonction de l'ensoleillement. 
@@ -330,6 +339,7 @@ def test_power(liste_bat,liste_power,power_theo):
     None.
 
     '''
+    count =  0 
     power_MPPT = 1305
     
     for elem in range(len(liste_bat)):
@@ -347,26 +357,28 @@ def test_power(liste_bat,liste_power,power_theo):
             power = float(liste_power[hours - 8])
             
             if (power < power_MPPT and sun_power > power_MPPT ):
+                    count = count +1
                     mot = "Problème d'encrassement détecté à " + str(hours) +'H le '+ str(liste_bat[0][3])
-                    print(mot)
-                    fenetre = Tk()
-                    # canvas
-                    canvas = Canvas(fenetre, width=600, height=300, background='yellow')
-                    
-                    
-                    txt = canvas.create_text(300, 60, text=mot, font="Arial 16 italic", fill="red")
-                    canvas.pack()
-                    
-                    button1 = Button(fenetre, text ='Puissance théorique', command= lambda: commande(power_theo,2))
-                    button2 = Button(fenetre, text ='Puissance mesurée', command= lambda: commande(liste_power,1) )
-                    
-                    button1.pack(side=LEFT, padx=5, pady=5)
-                    button2.pack(side=RIGHT, padx=5, pady=5)
-                    
-                        
-                    #Button(fenetre, text ='graphique puissance mesurée ')
-                    
-                    fenetre.mainloop()
+                   
+                    canvas.create_text(20, 60+count*40, text=mot, font="Arial 12 italic", fill="white",anchor = "w")
+''' fenetre = tk.Tk()
+ # canvas
+ canvas = tk.Canvas(fenetre, width=600, height=300, background='yellow')
+ 
+ 
+ txt = canvas.create_text(300, 60, text=mot, font="Arial 16 italic", fill="red")
+ canvas.pack()
+ 
+ button1 = tk.Button(fenetre, text ='Puissance théorique', command= lambda: commande(power_theo,2))
+ button2 = tk.Button(fenetre, text ='Puissance mesurée', command= lambda: commande(liste_power,1) )
+ 
+ button1.pack(side='left', padx=5, pady=5)
+ button2.pack(side='right', padx=5, pady=5)
+ 
+ 
+ #Button(fenetre, text ='graphique puissance mesurée ')
+ 
+ fenetre.mainloop()'''
 
 def correctSolarCSV(CSVfile,power_theo,puissance , tension, courant ):
     '''
@@ -457,53 +469,205 @@ def extract(text):
             
     return I,V,P
 
-def traitement (text):
-    '''
-    Lance le protocol de traitement des données provenant du BMS 
 
-    Parameters
-    ----------
-    text : str
-        JSON correspondant aux données fournies par le BMS .
 
-    Returns
-    -------
-    None.
-
-    '''
-    #text = "{'batteries':[{'id':0, 'S':[0.8, 0.92, 0.71, 0.94, 0.92, 0.74],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'H':[1, 3, 6, 9, 12], 'T':5.0, 'D': '25-7-2022'},{'id':1, 'S':[0.6, 0.4, 0.8, 0.1, 0.92, 0.5],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8],'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':3.0},{'id':2, 'S':[1.0, 1.0, 1.0, 1.0, 1.0, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':3, 'S':[1.0, 1.0, 1.0, 1.0, 1.0, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':4, 'S':[1.0, 1.0, 1.0, 1.0, 1.0, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':5, 'S':[0.0, 0.0, 0.0, 0.0, 0.1, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0}], 'solarPannels': [{'D': '25-7-2022', 'I': [2.4, 4.5, 8.1, 2.4, 4.5, 8.1, 2.4, 4.5, 8.1], 'V': [2.4, 4.5, 8.1, 2.4, 4.5, 8.1, 2.4, 4.5, 8.2], 'P': [1.1, 1.1, 1.1, 1.1, 1.1, 5.3, 14, 15, 16]}]}"
-    file_pv = "solar_data2.csv"
-    file_pv_total = "solar_data_total.csv"
-    file_batterie = "batteries_data2.csv"
-    file_batterie_total = "batteries_data_total.csv"
-    res =  extract(text)
-    I =  res[0].split()
-    V =  res[1].split()
-    P =  res[2].split()
-    for elem in range(len(I)):
-        I[elem] = float(I[elem])
-        V[elem] = float(V[elem])
-        P[elem] = float(P[elem])
-    print("I = ",I)
-    print("V = ",V)
-    print("P = ",P)
-    jsonMessage = readJson(text)
+def power_pannel(canvas,txt, mot,pt,hour ):
+    canvas.itemconfigure(txt, text = mot)
+    if (mot == ">> Affichage puissance théorique"):
+        
+        plt.title('Puissance théorique des panneaux sans batteries  ')
+        plt.xlabel('Heures de la journée [H]')
+        plt.ylabel('Puissance en courant continue  [W]')
+        plt.plot(hour, pt)   
+        plt.show()
+    elif (mot == ">> Affichage puissance panneaux"):
+        
+        plt.title('Puissance mesurée en sortie des panneaux ')
+        plt.xlabel('Heures de la journée [H]')
+        plt.ylabel('Puissance en courant continue  [W]')
+        plt.plot(hour, pt)   
+        plt.show()
+        
     
-    convertToCsvBatteries(jsonMessage)
-    power_theo = calcul_puissance_theorique()
+
+    
+def plt_batterie(canvas,txt,mot,pt,mode):
+    canvas.itemconfigure(txt, text = mot)
+    if (mode==1):
+        i =0  
+        X=[]
+        Y = []
+        plt.title("Calcul SOC")
+        for elem in range(1,len(pt)):
+            i=elem-1
+            if (pt[elem][1] ==pt[i][1] ):
+               
+                X.append(pt[i][0])
+                Y.append(pt[i][2])
+            else:
+                X.append(pt[i][0])
+                Y.append(pt[i][2])
+                
+                plt.plot(X,Y,'o-',label = 'id ' + str(pt[elem][1]))
+                X=[]
+                Y=[]
+        plt.xlabel('Heures de la mesure [h]')
+        plt.ylabel('SOC [%]')
+        plt.legend()
+        plt.show()
+    elif (mode==2):
+         i =0  
+         X=[]
+         Y = []
+         plt.title("Calcul tension batteries ")
+         for elem in range(1,len(pt)):
+             i=elem-1
+             if (pt[elem][1] ==pt[i][1] ):
+                
+                 X.append(pt[i][0])
+                 Y.append(pt[i][2])
+             else:
+                 X.append(pt[i][0])
+                 Y.append(pt[i][2])
+                 
+                 plt.plot(X,Y,'o-',label = 'id ' + str(pt[elem][1]))
+                 X=[]
+                 Y=[]
+         plt.xlabel('Heures de la mesure [h]')
+         plt.ylabel('Voltage[V]')
+         plt.legend()
+         plt.show()
+    
+    elif (mode==3):
+         i =0  
+         X=[]
+         Y = []
+         plt.title("Mesure des courants ")
+         for elem in range(1,len(pt)):
+             i=elem-1
+             if (pt[elem][1] ==pt[i][1] ):
+                
+                 X.append(pt[i][0])
+                 Y.append(pt[i][2])
+             else:
+                 X.append(pt[i][0])
+                 Y.append(pt[i][2])
+                
+                 plt.plot(X,Y,'o-',label = 'id ' + str(pt[elem][1]))
+                 X=[]
+                 Y=[]
+         plt.xlabel('Heures de la mesure [h]')
+         plt.ylabel('Courant [A]')
+         plt.legend()
+         plt.show()
+    elif (mode==4):
+         i =0  
+         X=[]
+         Y = []
+         plt.title("Puissance en entrée du MPPT")
+         for elem in range(1,len(pt)):
+             i=elem-1
+             if (pt[elem][1] ==pt[i][1] ):
+                
+                 X.append(pt[i][0])
+                 Y.append(pt[i][2])
+             else:
+                 X.append(pt[i][0])
+                 Y.append(pt[i][2])
+                 
+                 plt.plot(X,Y,'o-',label = 'id ' + str(pt[elem][1]))
+                 X=[]
+                 Y=[]
+         plt.xlabel('Heures de la mesure [h]')
+         plt.ylabel('Puissance [W]')
+         plt.legend()
+         plt.show()
+'''
+Lance le protocol de traitement des données provenant du BMS 
+
+Parameters
+----------
+text : str
+    JSON correspondant aux données fournies par le BMS .
+
+Returns
+-------
+None.
+
+'''
+text ="{'batteries':[{'id':0, 'S':[0.8, 0.92, 0.71, 0.94, 0.92, 0.74],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'H':[1, 3, 6, 9, 12], 'T':5.0, 'D': '25-7-2022'},{'id':1, 'S':[0.6, 0.4, 0.8, 0.1, 0.92, 0.5],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8],'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':3.0},{'id':2, 'S':[1.0, 1.0, 1.0, 1.0, 1.0, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':3, 'S':[0.4, 0.03, 0.6, 1.0, 1.2, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':4, 'S':[1.3, 1.1, 1.7, 1.0, 1.0, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0},{'id':5, 'S':[0.5, 0.3, 0.6, 0.3, 0.1, 5.0],'V':[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],'I':[0.5, 0.3, 0.0, 0.0, 0.3, -1.8], 'P':[260.6, 400.1, 340.4, 367.3, 234.8, 321.4], 'T':0.0}], 'solarPannels': [{'D': '25-7-2022', 'I': [2.4, 4.5, 8.1, 2.4, 4.5, 8.1, 2.4, 4.5, 8.1], 'V': [2.4, 4.5, 8.1, 2.4, 4.5, 8.1, 2.4, 4.5, 8.2], 'P': [1.1, 1.1, 1.1, 1.1, 1.1, 5.3, 14, 15, 16]}]}"
+file_pv = "solar_data2.csv"
+file_pv_total = "solar_data_total.csv"
+file_batterie = "batteries_data2.csv"
+file_batterie_total = "batteries_data_total.csv"
+res =  extract(text)
+I =  res[0].split()
+V =  res[1].split()
+P =  res[2].split()
+for elem in range(len(I)):
+    I[elem] = float(I[elem])
+    V[elem] = float(V[elem])
+    P[elem] = float(P[elem])
+
+jsonMessage = readJson(text)
+
+convertToCsvBatteries(jsonMessage)
+power_theo = calcul_puissance_theorique()
    
-    convertToCsvSolar(jsonMessage,power_theo )
-    
-    dico = correctBatteriesCSV(file_batterie)
-    print (dico)
-    correctSolarCSV(file_pv,power_theo,P,V,I)
-    test_power(dico,P,power_theo) 
-    add_csv(file_pv, file_pv_total)
-    add_csv(file_batterie, file_batterie_total)
-    erased('solar_data.csv')
-    erased('batteries_data.csv')
-    erased('solar_data2.csv')
-    erased('batteries_data2.csv')
+convertToCsvSolar(jsonMessage,power_theo )
 
+res = correctBatteriesCSV(file_batterie)
+dico = res[0]
+SOC = res[1]
+
+V_bat = res[2]
+I_bat =  res[3]
+P_bat = res[4]
+nb_mesure = res[5]
+
+root = tk.Tk() 
+sun_hour = [8,9,10,11,12,13,14,15,16]
+root.geometry('900x700')      
+canvas = tk.Canvas(root, width=450, height=560, background='black')
+txt = canvas.create_text(20, 60, text=">>", font="Arial 12 italic", fill="white",anchor = "w")
+canvas.place(x= 400 , y= 120)
+
+canvas_title = tk.Canvas(root, width=600, height=100, background='black')
+
+btn1 = tk.Button(root, text = 'Affichage SOC', command= lambda: plt_batterie(canvas,txt ,">> Affichage du SOC",SOC,1), padx = 30,pady=20) 
+btn2 = tk.Button(root, text = 'Affichage Tension', command= lambda: plt_batterie(canvas,txt ,">> Affichage tension",V_bat,2), padx = 30,pady=20)
+btn3 =  tk.Button(root, text = 'Affichage Courant', command= lambda:plt_batterie(canvas,txt ,">> Affichage Courant",I_bat,3), padx = 30,pady=20)
+btn4 = tk.Button(root, text = 'Affichage puissance batterie', command= lambda: plt_batterie(canvas,txt ,">> Affichage Puissance batteries",P_bat,4), padx = 30,pady=20)
+btn1.place(x=5, y=110) 
+btn2.place(x=5, y=210) 
+btn3.place(x=5, y=310) 
+btn4.place(x=5, y=410) 
+btn5 = tk.Button(root, text = 'Affichage puissance entré du MPPT', command= lambda: power_pannel(canvas,txt ,">> Affichage puissance panneaux",P,sun_hour ), padx = 30,pady=20)
+btn6 = tk.Button(root, text = 'Affichage puissance théorique sortie de panneaux', command= lambda: power_pannel(canvas,txt ,">> Affichage puissance théorique",power_theo,sun_hour), padx = 30,pady=20)
+
+
+btn5.place(x=5, y=510) 
+btn6.place(x=5, y=610)
+
+
+
+correctSolarCSV(file_pv,power_theo,P,V,I)
+test_power(dico,P,power_theo,canvas) 
+add_csv(file_pv, file_pv_total)
+add_csv(file_batterie, file_batterie_total)
+erased('solar_data.csv')
+erased('batteries_data.csv')
+erased('solar_data2.csv')
+erased('batteries_data2.csv')
+
+
+
+
+
+
+
+
+
+root.mainloop()
 
 
