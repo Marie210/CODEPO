@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Wed Aug  3 11:46:15 2022
+
+@author: tehoe
+"""
+
+# -*- coding: utf-8 -*-
 import paho.mqtt.client as mqtt
 import json
 import os
@@ -521,6 +528,10 @@ def traitement(text):
     root = Tk()
     root.config(bg="#FFFFE8")  # Background color
     root.geometry('900x700')
+    # label
+    label = Label(root, text="Mobateli 1", bg="yellow", width=100)
+    label.config(font=('Helvetica bold', 26))
+    label.pack()
     canvas = Canvas(root, width=450, height=560, background='black')
     txt = canvas.create_text(20, 60, text=">>", font="Arial 12 italic", fill="white", anchor="w")
     canvas.place(x=400, y=120)
