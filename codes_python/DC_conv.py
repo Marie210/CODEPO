@@ -10,7 +10,6 @@ import pvlib
 import numpy as np
 
 from bs4 import BeautifulSoup
-import matplotlib.pyplot as plt
 
 
 def calcul_puissance_theorique( ):
@@ -78,18 +77,6 @@ def calcul_puissance_theorique( ):
         dc_power[i] = dc_power[i ]* 20 
     
     # Let's visualize the DC power output as function of the effective irradiance
-    Heures = [8,9,10,11,12,13,14,15,16]
-    plt.scatter(Heures, dc_power, c=Temp, vmin=10, vmax=50, cmap='Reds')
-    cbar = plt.colorbar()
-    puissance_moyenne  =  0 
-    for  j  in  range(len(dc_power)):
-        puissance_moyenne += dc_power[j]
-    puissance_moyenne = puissance_moyenne/9.0
-    
-    cbar.set_label('Température air ambiante[$^\circ$C]')
-    plt.title('Puissance théorique en sortie des panneaux solaire')
-    plt.xlabel('Heures de la journée [H]')
-    plt.ylabel('Puissance en courant continue  [W]')
-    plt.show()
+  
     return dc_power.tolist()
     
