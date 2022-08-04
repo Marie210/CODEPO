@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Wed Aug  3 16:48:26 2022
+
+@author: tehoe
+"""
+
+# -*- coding: utf-8 -*-
 import paho.mqtt.client as mqtt
 import json
 import os
@@ -524,32 +531,32 @@ def traitement(text):
     title = Label(root, text="Mobateli 1", bg="#ACC8E6", width=100, font=('Helvetica bold', 26))
     title.pack()
 
-    canvas = Canvas(root, width=450, height=560, background='black')
+    canvas = Canvas(root, width=450, height=540, background='black')
     txt = canvas.create_text(20, 60, text=">>", font="Arial 12 italic", fill="white", anchor="w")
-    canvas.place(x=400, y=120)
+    canvas.place(x=400, y=100)
 
     btn1 = Button(root, text='Affichage SOC',
-                  command=lambda: plt_batterie(canvas, txt, ">> Affichage du SOC", SOC, 1), padx=30, pady=20, bg="#ADD8E6")
+                  command=lambda: plt_batterie(canvas, txt, ">> Affichage du SOC", SOC, 1), padx=30, pady=20, bg="#ADD8E6",width = 40,anchor='w')
     btn2 = Button(root, text='Affichage Tension',
-                  command=lambda: plt_batterie(canvas, txt, ">> Affichage tension", V_bat, 2), padx=30, pady=20, bg="#ADD8E6")
+                  command=lambda: plt_batterie(canvas, txt, ">> Affichage tension", V_bat, 2), padx=30, pady=20, bg="#ADD8E6",width = 40,anchor='w')
     btn3 = Button(root, text='Affichage Courant',
-                  command=lambda: plt_batterie(canvas, txt, ">> Affichage Courant", I_bat, 3), padx=30, pady=20, bg="#ADD8E6")
+                  command=lambda: plt_batterie(canvas, txt, ">> Affichage Courant", I_bat, 3), padx=30, pady=20, bg="#ADD8E6",width = 40,anchor='w')
     btn4 = Button(root, text='Affichage puissance batterie',
                   command=lambda: plt_batterie(canvas, txt, ">> Affichage Puissance batteries", P_bat, 4), padx=30,
-                  pady=20, bg="#ADD8E6")
+                  pady=20, bg="#ADD8E6",width = 40,anchor='w')
     btn5 = Button(root, text='Affichage puissance entré du MPPT',
                   command=lambda: power_pannel(canvas, txt, ">> Affichage puissance panneaux", P, sun_hour), padx=30,
-                  pady=20, bg="#ADD8E6")
-    btn6 = Button(root, text='Affichage puissance théorique sortie de panneaux',
+                  pady=20, bg="#ADD8E6",width = 40,anchor='w')
+    btn6 = Button(root, text='Affichage puissance théorique sortie des panneaux',
                   command=lambda: power_pannel(canvas, txt, ">> Affichage puissance théorique", power_theo,
-                                               sun_hour), padx=30, pady=20, bg="#ADD8E6")
+                                               sun_hour), padx=30, pady=20, bg="#ADD8E6",width = 40,anchor='w')
 
-    btn1.place(x=5, y=110)
-    btn2.place(x=5, y=210)
-    btn3.place(x=5, y=310)
-    btn4.place(x=5, y=410)
-    btn5.place(x=5, y=510)
-    btn6.place(x=5, y=610)
+    btn1.place(x=5, y=90)
+    btn2.place(x=5, y=190)
+    btn3.place(x=5, y=290)
+    btn4.place(x=5, y=390)
+    btn5.place(x=5, y=490)
+    btn6.place(x=5, y=590)
 
     correctSolarCSV(file_pv, power_theo, P, V, I)
     test_power(dico, P, power_theo, canvas)
@@ -583,17 +590,22 @@ def plt_batterie(canvas, txt, mot, pt, mode):
     if mode == 1:
         X = []
         Y = []
+        SOC_moyen = 0
+        count_moyenne = 0
         plt.title("Calcul SOC")
         for elem in range(1, len(pt)):
             i = elem - 1
             if pt[elem][1] == pt[i][1]:
+                if (pt[i][1]==0):
+                    SOC_moyen+=pt[i][2]
+                    count_moyenne +=1
 
                 X.append(pt[i][0])
                 Y.append(pt[i][2])
             else:
                 X.append(pt[i][0])
                 Y.append(pt[i][2])
-
+                X.sort()
                 plt.plot(X, Y, 'o-', label='id' + str(pt[elem][1]))
                 X = []
                 Y = []
@@ -601,19 +613,27 @@ def plt_batterie(canvas, txt, mot, pt, mode):
         plt.ylabel('SOC [%]')
         plt.legend()
         plt.show()
+        SOC_moyen = SOC_moyen/count_moyenne
+        
+        canvas.itemconfigure(txt, text='State of charge moyen du batterie pack = '+ str(SOC_moyen))
     elif mode == 2:
         X = []
         Y = []
+        V_moyen =0 
+        count_moyenne=0
         plt.title("Calcul tension batteries")
         for elem in range(1, len(pt)):
+            i = elem - 1
             if pt[elem][1] == pt[elem - 1][1]:
-
+                if (pt[i][1]==0):
+                    V_moyen+=pt[i][2]
+                    count_moyenne +=1
                 X.append(pt[elem - 1][0])
                 Y.append(pt[elem - 1][2])
             else:
                 X.append(pt[elem - 1][0])
                 Y.append(pt[elem - 1][2])
-
+                X.sort()
                 plt.plot(X, Y, 'o-', label='id ' + str(pt[elem][1]))
                 X = []
                 Y = []
@@ -621,19 +641,28 @@ def plt_batterie(canvas, txt, mot, pt, mode):
         plt.ylabel('Voltage[V]')
         plt.legend()
         plt.show()
+        V_moyen = V_moyen/count_moyenne
+        canvas.itemconfigure(txt, text='Tension moyenne aux bornes du batterie pack = '+ str(V_moyen))
+
 
     elif mode == 3:
         X = []
         Y = []
+        I_moyen =  0  
+        count_moyenne = 0 
         plt.title("Mesure des courants ")
         for elem in range(1, len(pt)):
+            i = elem - 1
             if pt[elem][1] == pt[elem - 1][1]:
+                if (pt[i][1]==0):
+                    I_moyen+=pt[i][2]
+                    count_moyenne +=1
                 X.append(pt[elem - 1][0])
                 Y.append(pt[elem - 1][2])
             else:
                 X.append(pt[elem - 1][0])
                 Y.append(pt[elem - 1][2])
-
+                X.sort()
                 plt.plot(X, Y, 'o-', label='id ' + str(pt[elem][1]))
                 X = []
                 Y = []
@@ -641,25 +670,38 @@ def plt_batterie(canvas, txt, mot, pt, mode):
         plt.ylabel('Courant [A]')
         plt.legend()
         plt.show()
+        I_moyen = I_moyen/count_moyenne
+        canvas.itemconfigure(txt, text='Courant moyen traversant le batterie pack = '+ str(I_moyen))
     elif mode == 4:
         X = []
         Y = []
+        Puissance_moyenne = 0
+        count_moyenne= 0
         plt.title("Puissance en entrée du MPPT")
         for elem in range(1, len(pt)):
+            i = elem - 1
             if pt[elem][1] == pt[elem - 1][1]:
+                if (pt[i][1]==0):
+                    Puissance_moyenne+=pt[i][2]
+                    count_moyenne +=1
                 X.append(pt[elem - 1][0])
                 Y.append(pt[elem - 1][2])
             else:
                 X.append(pt[elem - 1][0])
                 Y.append(pt[elem - 1][2])
-
+                X.sort()
+                
                 plt.plot(X, Y, 'o-', label='id ' + str(pt[elem][1]))
                 X = []
                 Y = []
+        
         plt.xlabel('Heures de la mesure [h]')
         plt.ylabel('Puissance [W]')
         plt.legend()
         plt.show()
+        Puissance_moyenne = Puissance_moyenne/count_moyenne
+        canvas.itemconfigure(txt, text='Puissance moyenne délivrée par le batterie pack =  '+ str(Puissance_moyenne))
+        
 
 
 ##### Communication ###################################################################################
@@ -684,18 +726,18 @@ def on_message(client, userdata, msg):  # Réponse à un message reçu
 
 
 # Create client object with a persistent connection (!clean session), in this mode the broker will store subscription information, and undelivered messages for the client.
-client = mqtt.Client(client_id=clientid, clean_session=False)
+#client = mqtt.Client(client_id=clientid, clean_session=False)
 
 # Callbacks are functions that are called in response to an event, here we attach function to callback
-client.on_connect = on_connect  # Response to a connection event
-client.on_message = on_message  # Response to a message received event
+#client.on_connect = on_connect  # Response to a connection event
+#client.on_message = on_message  # Response to a message received event
 
-client.username_pw_set(username, password)
+#client.username_pw_set(username, password)
 
 # Connection to the brooker
 # port : the network port of the server host to connect to. Defaults to 1883.
 # keepalive : maximum period in seconds allowed between communications with the broker. If no other messages are being exchanged, this controls the rate at which the client will send ping messages to the broker
-client.connect(host=broker_address, port=1883, keepalive=600)
-client.loop_forever()
+#client.connect(host=broker_address, port=1883, keepalive=600)
+#client.loop_forever()
 
-#traitement("{'batteries':[{'id':0,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'H':[0,0,0,0,0],'T':27.9,'D':'25-7-2022'},{'id':1,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':30.7},{'id':2,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.8],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':30.1},{'id':3,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':31.6},{'id':4,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':28.7},{'id':5,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':29.8}],'solarPannels':[{'D':'25-7-2022','I':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],'V':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}]}")
+traitement("{'batteries':[{'id':0,'S':[0.0,1.0,1.0,0.93,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,4.0],'P':[0.0,0.0,6.0,0.0,0.0,0.0],'H':[0,4,8,12,16],'T':27.9,'D':'25-7-2022'},{'id':1,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':30.7},{'id':2,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.8],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':30.1},{'id':3,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':31.6},{'id':4,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':28.7},{'id':5,'S':[0.0,1.0,1.0,1.0,1.0,1.0],'V':[0.0,12.9,12.9,12.9,12.9,12.9],'I':[0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0],'T':29.8}],'solarPannels':[{'D':'25-7-2022','I':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],'V':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],'P':[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}]}")
